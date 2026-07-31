@@ -7,106 +7,25 @@
 std::string int_to_hex(int num);
 std::string int_to_binary(int num);
 bool valid_arg(char* argument, std::string& arg, std::string& value);
+int bin_to_hex(int argc, char* argv[]);
 
 int main(int argc, char* argv[])
 {
     // Check to see if too many arguments were given
-    if (argc > 5) {
+    if (argc > 6) {
         std::cerr << "Error: Too many arguments. Usage: " << argv[0] << " <your argument>\n";
         return 1;
     }
-
-    std::string valid_in_file = "";
-    std::string valid_out_file = "";
-    int valid_bpr = 0;
-    bool valid_interpreter = false;
-
-    for (int i = 1; i < argc; i++) {
-        // std::cout << argv[i] << "\n";
-        std::string command_value;
-        std::string arg_key;
-        if (valid_arg(argv[i], arg_key, command_value)) {
-            // std::cout << arg_key << ' ' << argc << "\n";
-            if (arg_key == "input-file") {
-                valid_in_file = command_value;
-            } else if (arg_key == "output-file") {
-                valid_out_file = command_value;
-            } else if (arg_key == "binary-output") {
-                valid_interpreter = std::stoi(command_value); // Should be 1 for true, 0 for false
-            } else {
-                valid_bpr = std::stoi(command_value);
-            }
-        }
-    }
-
-    // std::cout << valid_in_file << " " << valid_out_file << " " << valid_bpr << " " << valid_interpreter << "\n";
-
-    std::string hexfile;
-    std::string outfile;
-    int bytes_per_row;
-    bool binary_file;
-    if (valid_in_file != "") {
-        hexfile = valid_in_file;
-    } else {hexfile = "SLUS_205.91";}  // File to read the hex data from
-    if (valid_out_file != "") {
-        outfile = valid_out_file;
-    } else {outfile = "SLUS_custom.txt";} // File to write the hex data to
-    if (valid_bpr != 0) {
-        bytes_per_row = valid_bpr;
-    } else {bytes_per_row = 32;}
-    if (!valid_interpreter) {
-        binary_file = false;
-    } else {binary_file = true;}
-    
-
-    // Access point to read file as binary, starting at the end of the file
-    std::fstream readfile{hexfile, std::ios::in | std::ios::binary | std::ios::ate}; 
-    // Check for open error
-    if (!readfile.is_open())
+    std::string command = "";
+    int j = 0;
+    do 
     {
-        std::cerr << "Failed to open the file: " << hexfile << ".\n";
-        return 1;
-    }
+        command.push_back(argv[1][j]);
+        j++;
+    } while (argv[1][j] != '\0');
 
-    std::streamsize insize = readfile.tellg(); // Tells the total length of the file we're reading
-    readfile.seekg(0); // Moves the read file pointer to begin reading the file
-    
-
-    // Create a buffer the same size as the file
-    std::vector<char> buffer(insize);
-
-    // Read the bulk stream into the vector memory block
-    if (readfile.read(buffer.data(), insize)) {
-        std::cout << "Successfully loaded " << insize << " bytes into memory.\n";
-    }
-    readfile.close();
-
-    // Access point to write to file, which will be in hex (0-9, A-F)
-    std::ofstream writefile{outfile, std::ios::out};
-    // Check for open error
-    if (!writefile)
-    {
-        std::cerr << "Uh oh, " << outfile << " could not be opened for writing!\n";
-        return 1;
-    }
-
-    for (int i = 1; i <= insize; i++) {
-        if (i % bytes_per_row == 0) {
-            writefile << "\n";
-        }
-        if (binary_file) {
-            writefile << int_to_binary(int(uint8_t(buffer[i]))) << ' ';
-        } else {
-            writefile << int_to_hex(int(uint8_t(buffer[i]))) << ' ';
-        }
-    }
-    writefile.close();
-
-
-    if (binary_file) {
-        std::cout << "Binary Writing Completed Successfully!\n";    
-    } else {
-        std::cout << "Hex Writing Completed Successfully!\n";
+    if ("bin-to-hex" == command) {
+        bin_to_hex(argc - 2, argv + 2);
     }
 
     return 0;
@@ -191,6 +110,103 @@ bool valid_arg(char* argument, std::string& arg, std::string& value){
             i++;
         }while (argument[i] != '\0');
         return 1;
+    }
+
+    return 0;
+}
+
+int bin_to_hex(int argc, char* argv[]) {
+    std::string valid_in_file = "";
+    std::string valid_out_file = "";
+    int valid_bpr = 0;
+    bool valid_interpreter = false;
+
+    for (int i = 0; i < argc; i++) {
+        // std::cout << argv[i] << "\n";
+        std::string command_value;
+        std::string arg_key;
+        if (valid_arg(argv[i], arg_key, command_value)) {
+            // std::cout << arg_key << ' ' << argc << "\n";
+            if (arg_key == "input-file") {
+                valid_in_file = command_value;
+            } else if (arg_key == "output-file") {
+                valid_out_file = command_value;
+            } else if (arg_key == "binary-output") {
+                valid_interpreter = std::stoi(command_value); // Should be 1 for true, 0 for false
+            } else {
+                valid_bpr = std::stoi(command_value);
+            }
+        }
+    }
+
+    // std::cout << valid_in_file << " " << valid_out_file << " " << valid_bpr << " " << valid_interpreter << "\n";
+
+    std::string hexfile;
+    std::string outfile;
+    int bytes_per_row;
+    bool binary_file;
+    if (valid_in_file != "") {
+        hexfile = valid_in_file;
+    } else {hexfile = "SLUS_205.91";}  // File to read the hex data from
+    if (valid_out_file != "") {
+        outfile = valid_out_file;
+    } else {outfile = "SLUS_custom.txt";} // File to write the hex data to
+    if (valid_bpr != 0) {
+        bytes_per_row = valid_bpr;
+    } else {bytes_per_row = 32;}
+    if (!valid_interpreter) {
+        binary_file = false;
+    } else {binary_file = true;}
+    
+
+    // Access point to read file as binary, starting at the end of the file
+    std::fstream readfile{hexfile, std::ios::in | std::ios::binary | std::ios::ate}; 
+    // Check for open error
+    if (!readfile.is_open())
+    {
+        std::cerr << "Failed to open the file: " << hexfile << ".\n";
+        return 1;
+    }
+
+    std::streamsize insize = readfile.tellg(); // Tells the total length of the file we're reading
+    readfile.seekg(0); // Moves the read file pointer to begin reading the file
+    
+
+    // Create a buffer the same size as the file
+    std::vector<char> buffer(insize);
+
+    // Read the bulk stream into the vector memory block
+    if (readfile.read(buffer.data(), insize)) {
+        std::cout << "Successfully loaded " << insize << " bytes into memory.\n";
+    }
+    readfile.close();
+
+    // Access point to write to file, which will be in hex (0-9, A-F)
+    std::ofstream writefile{outfile, std::ios::out};
+    // Check for open error
+    if (!writefile)
+    {
+        std::cerr << "Uh oh, " << outfile << " could not be opened for writing!\n";
+        return 1;
+    }
+
+    for (int i = 0; i <= insize; i++) {
+        if (i % bytes_per_row == 0 && i != 0) {
+            writefile << "\n";
+        }
+        if (binary_file) {
+            writefile << int_to_binary(int(uint8_t(buffer[i]))) << ' ';
+        } else {
+            writefile << int_to_hex(int(uint8_t(buffer[i]))) << ' ';
+        }
+    }
+    writefile.close();
+
+
+    if (binary_file) {
+        std::cout << "Binary Writing Completed Successfully!\n";    
+    } else {
+        std::cout << "Hex Writing Completed Successfully!\n";
     }
 
     return 0;
