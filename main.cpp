@@ -6,14 +6,58 @@
 
 std::string int_to_hex(int num);
 std::string int_to_binary(int num);
+bool valid_arg(char* argument, std::string& arg, std::string& value);
 
-int main()
+int main(int argc, char* argv[])
 {
+    // Check to see if too many arguments were given
+    if (argc > 5) {
+        std::cerr << "Error: Too many arguments. Usage: " << argv[0] << " <your argument>\n";
+        return 1;
+    }
+
+    std::string valid_in_file = "";
+    std::string valid_out_file = "";
+    int valid_bpr = 0;
+    bool valid_interpreter = false;
+
+    for (int i = 1; i < argc; i++) {
+        // std::cout << argv[i] << "\n";
+        std::string command_value;
+        std::string arg_key;
+        if (valid_arg(argv[i], arg_key, command_value)) {
+            // std::cout << arg_key << ' ' << argc << "\n";
+            if (arg_key == "input-file") {
+                valid_in_file = command_value;
+            } else if (arg_key == "output-file") {
+                valid_out_file = command_value;
+            } else if (arg_key == "binary-output") {
+                valid_interpreter = std::stoi(command_value); // Should be 1 for true, 0 for false
+            } else {
+                valid_bpr = std::stoi(command_value);
+            }
+        }
+    }
+
+    // std::cout << valid_in_file << " " << valid_out_file << " " << valid_bpr << " " << valid_interpreter << "\n";
+
+    std::string hexfile;
+    std::string outfile;
+    int bytes_per_row;
+    bool binary_file;
+    if (valid_in_file != "") {
+        hexfile = valid_in_file;
+    } else {hexfile = "SLUS_205.91";}  // File to read the hex data from
+    if (valid_out_file != "") {
+        outfile = valid_out_file;
+    } else {outfile = "SLUS_custom.txt";} // File to write the hex data to
+    if (valid_bpr != 0) {
+        bytes_per_row = valid_bpr;
+    } else {bytes_per_row = 32;}
+    if (!valid_interpreter) {
+        binary_file = false;
+    } else {binary_file = true;}
     
-    std::string hexfile = "SLUS_205.91";     // File to read the hex data from
-    std::string outfile = "SLUS_custom.txt"; // File to write the hex data to
-    int bytes_per_row = 32;
-    bool binary_file = false;
 
     // Access point to read file as binary, starting at the end of the file
     std::fstream readfile{hexfile, std::ios::in | std::ios::binary | std::ios::ate}; 
@@ -132,3 +176,22 @@ std::string int_to_binary(int num) {
     return result;
 }
 
+bool valid_arg(char* argument, std::string& arg, std::string& value){
+    int i = 2;
+    do 
+    {
+        arg.push_back(argument[i]);
+        i++;
+    } while (argument[i] != '=');
+    
+    if (arg == "input-file" || arg == "output-file" || arg == "bytes-per-row" || arg == "binary-output") {
+        i++;
+        do{
+            value.push_back(argument[i]);
+            i++;
+        }while (argument[i] != '\0');
+        return 1;
+    }
+
+    return 0;
+}
