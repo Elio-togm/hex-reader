@@ -29,6 +29,31 @@ struct BinaryInstructionJ {
     uint32_t pseudo_address;  // 26 bits
 };
 
+struct BinaryInstructionUniversal {
+    char instruction_type;
+    uint32_t instruction;  // The baseline instruction that everything should reference
+    BinaryInstructionR register_instruction = {
+        static_cast<uint8_t>(instruction >> 26),          // opcode
+        static_cast<uint8_t>((instruction << 6) >> 27),   // source register 1
+        static_cast<uint8_t>((instruction << 11) >> 27),  // source register 2
+        static_cast<uint8_t>((instruction << 16) >> 27),  // target register
+        static_cast<uint8_t>((instruction << 21) >> 27),  // shift value
+        static_cast<uint8_t>((instruction << 26) >> 26)   // function code
+    };
+
+    BinaryInstructionI immediate_instruction = {
+        static_cast<uint8_t>(instruction >> 26),            // opcode
+        static_cast<uint8_t>((instruction << 6) >> 26),     // source register
+        static_cast<uint8_t>((instruction << 11) >> 27),    // target register
+        static_cast<uint16_t>((instruction << 16) >> 16)     // immediate value
+    };
+
+    BinaryInstructionJ jump_instruction = {
+        static_cast<uint8_t>(instruction >> 26),            // opcode
+        (instruction << 6) >> 6                             // psuedo address
+    };
+};
+
 //? THE FOLLOWING SECTION IS INTEGER - OPCODE KEY - VALUE PAIRS
 
 // The Standard Opcodes and their integer representations
@@ -151,7 +176,7 @@ const std::map<int, std::string> COPROCESSOR_0_INSTRUCTIONS{
     {16, "Translation Lookaside Buffer/Exceptions"},
 };
 
-// The Branch on Coprocessor 0 Opcodes
+// The Branchon Coprocessor 0 Opcodes
 const std::map<int, std::string> BC0_INSTRUCTIONS{
     {0, "BC0F"},
     {1, "BC0T"},
@@ -236,6 +261,468 @@ const std::map<int, std::string> COP2_SPECIAL2_INSTRUCTIONS{
     {63, "VISWR"},   {64, "VRNEXT"},  {65, "VRGET"},   {66, "VRINIT"},  {67, "VRXOR"},
 };
 
+//? Enumeration keyword for all above instructions
+
+// The Standard Opcodes and their integer representations
+enum class STANDARD_INSTRUCTIONS : uint32_t {
+    REGISTER = 0,
+    REGISTER_IMMEDIATE = 1,
+    J = 2,
+    JAL = 3,
+    BEQ = 4,
+    BNE = 5,
+    BLEZ = 6,
+    BGTZ = 7,
+    ADDI = 8,
+    ADDIU = 9,
+    SLTI = 10,
+    SLTIU = 11,
+    ANDI = 12,
+    ORI = 13,
+    XORI = 14,
+    LUI = 15,
+    SYSTEM_CONTROL_COPROCESSOR = 16,
+    FLOATING_POINT_SINGLE_PRECISION_COPROCESSOR = 17,
+    VECTOR_POINT_UNIT_COPROCESSOR = 18,
+    BEQL = 20,
+    BNEL = 21,
+    BLEZL = 22,
+    BGTZL = 23,
+    DADDI = 24,
+    DADDIU = 25,
+    LDL = 26,
+    LDR = 27,
+    MULTIMEDIA_EXTENSIONS = 28,
+    LQ = 30,
+    SQ = 31,
+    LB = 32,
+    LH = 33,
+    LWL = 34,
+    LW = 35,
+    LBU = 36,
+    LHU = 37,
+    LWR = 38,
+    LWU = 39,
+    SB = 40,
+    SH = 41,
+    SWL = 42,
+    SW = 43,
+    SDL = 44,
+    SDR = 45,
+    SWR = 46,
+    CACHE = 47,
+    LWC1 = 49,
+    PREF = 51,
+    LQC2 = 54,
+    LD = 55,
+    SWC1 = 57,
+    SQC2 = 62,
+    SD = 63
+};
+
+// The Register-Type Opcodes
+enum class REGISTER_INSTRUCTIONS : uint32_t {
+    SLL = 0,
+    SRL = 2,
+    SRA = 3,
+    SLLV = 4,
+    SRLV = 6,
+    SRAV = 7,
+    JR = 8,
+    JALR = 9,
+    MOVZ = 10,
+    MOVN = 11,
+    SYSCALL = 12,
+    BREAK = 13,
+    SNYC = 15,
+    MFHI = 16,
+    MTHI = 17,
+    MFLO = 18,
+    MTLO = 19,
+    DSLLV = 20,
+    DSRLV = 22,
+    DSRAV = 23,
+    MULT = 24,
+    MULTU = 25,
+    DIV = 26,
+    DIVU = 27,
+    ADD = 32,
+    ADDU = 33,
+    SUB = 34,
+    SUBU = 35,
+    AND = 36,
+    OR = 37,
+    XOR = 38,
+    NOR = 39,
+    MFSA = 40,
+    MTSA = 41,
+    SLT = 42,
+    SLTU = 43,
+    DADD = 44,
+    DADDU = 45,
+    DSUB = 46,
+    DSUBU = 47,
+    TGE = 48,
+    TGEU = 49,
+    TLT = 50,
+    TLTU = 51,
+    TEQ = 52,
+    TNE = 54,
+    DSLL = 56,
+    DSRL = 58,
+    DSRA = 59,
+    DSLL32 = 60,
+    DSRL32 = 62,
+    DSRA32 = 63
+};
+
+// The Register Immediate Opcodes
+enum class REGIMM_INSTRUCTIONS : uint32_t {
+    BLTZ = 0,
+    BGEZ = 1,
+    BLTZL = 2,
+    BGEZL = 3,
+    TGEI = 8,
+    TGEIU = 9,
+    TLTI = 10,
+    TLTIU = 11,
+    TEQI = 12,
+    TNEI = 14,
+    BLTZAL = 16,
+    BGEZAL = 17,
+    BLTZALL = 18,
+    BGEZALL = 19,
+    MTSAB = 24,
+    MTSAH = 25
+};
+
+// The Multimedia Extension Opcodes
+enum class MULTIMEDIA_INSTRUCTIONS : uint32_t {
+    MADD = 0,
+    MADDU = 1,
+    PLZCW = 4,
+    MMI0_GROUP = 8,
+    MMI2_GROUP = 9,
+    MFHI1 = 16,
+    MTHI1 = 17,
+    MFLO1 = 18,
+    MTLO1 = 19,
+    MULT1 = 24,
+    MULTU1 = 25,
+    DIV1 = 26,
+    DIVU1 = 27,
+    MADD1 = 32,
+    MADDU1 = 33,
+    MMI1_GROUP = 40,
+    MMI3_GROUP = 41,
+    PSLLH = 44,
+    PSRLH = 46,
+    PSRAH = 47,
+    PSLLW = 60,
+    PSRLW = 62,
+    PSRAW = 63
+};
+
+// The Multimedia Group 0 Opcodes
+enum class MULTIMEDIA_GROUP_0 : uint32_t {
+    PADDW = 0,
+    PSUBW = 1,
+    PCGTW = 2,
+    PMAXW = 3,
+    PADDH = 4,
+    PSUBH = 5,
+    PCGTH = 6,
+    PMAXH = 7,
+    PADDB = 8,
+    PSUBB = 9,
+    PCGTB = 10,
+    PADDSW = 16,
+    PSUBSW = 17,
+    PEXTLW = 18,
+    PPACW = 19,
+    PADDSH = 20,
+    PSUBSH = 21,
+    PEXTLH = 22,
+    PPACH = 23,
+    PADDSB = 24,
+    PSUBSB = 25,
+    PEXTLB = 26,
+    PPACB = 27,
+    PEXT5 = 30,
+    PPAC5 = 31
+};
+
+// The Multimedia Group 1 Opcodes
+enum class MULTIMEDIA_GROUP_1 : uint32_t {
+    PABSW = 1,
+    PCEQW = 2,
+    PMINW = 3,
+    PADSBH = 4,
+    PABSH = 5,
+    PCEQH = 6,
+    PMINH = 7,
+    PCEQB = 10,
+    PADDUW = 16,
+    PSUBUW = 17,
+    PEXTUW = 18,
+    PADDUH = 20,
+    PSUBUH = 21,
+    PEXTUH = 22,
+    PADDUB = 24,
+    PSUBUB = 25,
+    PEXTUB = 26,
+    QFSRV = 27
+};
+
+// The Multimedia Group 2 Opcodes
+enum class MULTIMEDIA_GROUP_2 : uint32_t {
+    PMADDW = 0,
+    PSLLVW = 2,
+    PSRLVW = 3,
+    PMSUBW = 4,
+    PMFLO = 5,
+    PINTH = 6,
+    PMULTW = 8,
+    PDIVW = 9,
+    CPLYD = 10,
+    PMADDH = 12,
+    PHMADH = 13,
+    PAND = 14,
+    PXOR = 15,
+    PMSUBH = 16,
+    PHMSBH = 17,
+    PEXEH = 26,
+    PREVH = 27,
+    PMULTH = 28,
+    PDIVBW = 29,
+    PEXEW = 30,
+    PROT3W = 31
+};
+
+// The Multimedia Group 3 Opcodes
+enum class MULTIMEDIA_GROUP_3 : uint32_t {
+    PMADDUW = 0,
+    PSRAVW = 3,
+    PMTHI = 8,
+    PMTLO = 9,
+    PINTEH = 10,
+    PMULTUW = 12,
+    PDIVUW = 13,
+    PCPYUD = 14,
+    POR = 18,
+    PNOR = 19,
+    PEXCH = 26,
+    PCPYH = 27,
+    PEXCW = 30
+};
+
+// The System Control Coprocessor Opcodes
+enum class COPROCESSOR_0_INSTRUCTIONS : uint32_t {
+    MFC0 = 0,
+    MTC0 = 4,
+    BRANCH_ON_COPROCESSOR_0 = 8,
+    TRANSLATION_LOOKASIDE_BUFFER_EXCEPTIONS = 16
+};
+
+// The Branch on Coprocessor 0 Opcodes
+enum class BC0_INSTRUCTIONS : uint32_t { BC0F = 0, BC0T = 1, BC0FL = 2, BC0TL = 3 };
+
+// The Translation Lookaside Buffer/Exception Opcodes
+enum class TLB_EXCEPTION_INSTRUCTIONS : uint32_t {
+    TLBR = 1,
+    TLBWI = 2,
+    TLBWR = 6,
+    TLBP = 8,
+    ERET = 24,
+    EI = 56,
+    DI = 57
+};
+
+// The Floating Point Unit Opcodes
+enum class COPROCESSOR_1_INSTRUCTIONS : uint32_t {
+    MFC1 = 0,
+    CFC1 = 2,
+    MTC1 = 4,
+    CTC1 = 6,
+    BRANCH_ON_COPROCESSOR_1 = 8,
+    FLOATING_POINT_UNIT_SINGLE_PRECISION = 16,
+    FLOATING_POINT_UNIT_WORD = 20
+};
+
+// The Branch on Coprocessor 1 Opcodes
+enum class BC1_INSTRUCTIONS : uint32_t { BC1F = 0, BC1T = 1, BC1FL = 2, BC1TL = 3 };
+
+// The Single-Precision Floating Point Unit Opcodes
+enum class FPU_S_INSTRUCTIONS : uint32_t {
+    ADD_S = 0,
+    SUB_S = 1,
+    MUL_S = 2,
+    DIV_S = 3,
+    SQRT_S = 4,
+    ABS_S = 5,
+    MOV_S = 6,
+    NEG_S = 7,
+    RSQRT_S = 22,
+    ADDA_S = 24,
+    SUBA_S = 25,
+    MULA_S = 26,
+    MADD_S = 28,
+    MSUB_S = 29,
+    MADDA_S = 30,
+    MSUBA_S = 31,
+    MAX_S = 40,
+    MIN_S = 41,
+    C_F = 48,
+    C_EQ = 50,
+    C_LT = 52,
+    C_LE = 54
+};
+
+// The Word Fixed-Point Floating Point Unit Opcodes
+enum class FPU_W_INSTRUCTIONS : uint32_t { CVT_S = 32 };
+
+// The Vector Processing Unit Opcodes
+enum class COPROCESSOR_2_INSTRUCTIONS : uint32_t {
+    QMFC2 = 1,
+    CFC2 = 2,
+    QMTC2 = 5,
+    CTC2 = 6,
+    BRANCH_ON_COPROCESSOR_2 = 8,
+    SPECIAL_1 = 16
+};
+
+// The Branch on Coprocessor 2 Opcodes
+enum class BC2_INSTRUCTIONS : uint32_t { BC2F = 0, BC2T = 1, BC2FL = 2, BC2TL = 3 };
+
+// The VPU 1st Extension Opcodes
+enum class COP2_SPECIAL1_INSTRUCTIONS : uint32_t {
+    VADDx = 0,
+    VADDy = 1,
+    VADDz = 2,
+    VADDw = 3,
+    VSUBx = 4,
+    VSUBy = 5,
+    VSUBz = 6,
+    VSUBw = 7,
+    VMADDx = 8,
+    VMADDy = 9,
+    VMADDz = 10,
+    VMADDw = 11,
+    VMSUBx = 12,
+    VMSUBy = 13,
+    VMSUBz = 14,
+    VMSUBw = 15,
+    VMAXx = 16,
+    VMAXy = 17,
+    VMAXz = 18,
+    VMAXw = 19,
+    VMINIx = 20,
+    VMINIy = 21,
+    VMINIz = 22,
+    VMINIw = 23,
+    VMULx = 24,
+    VMULy = 25,
+    VMULz = 26,
+    VMULw = 27,
+    VMULq = 28,
+    VMAXi = 29,
+    VMULi = 30,
+    VMINIi = 31,
+    VADDq = 32,
+    VMADDq = 33,
+    VADDi = 34,
+    VMADDi = 35,
+    VSUBq = 36,
+    VMSUBq = 37,
+    VSUBi = 38,
+    VMSUBi = 39,
+    VADD = 40,
+    VMADD = 41,
+    VMUL = 42,
+    VMAX = 43,
+    VSUB = 44,
+    VMSUB = 45,
+    VOPMSUB = 46,
+    VMINI = 47,
+    VIADD = 48,
+    VISUB = 49,
+    VIADDI = 50,
+    VIAND = 52,
+    VIOR = 53,
+    VCALLMS = 56,
+    CALLMSR = 57,
+    SPECIAL_2 = 60
+};
+
+// The VPU 2nd Extension Opcodes
+enum class COP2_SPECIAL2_INSTRUCTIONS : uint32_t {
+    VADDAx = 0,
+    VADDAy = 1,
+    VADDAz = 2,
+    VADDAw = 3,
+    VSUBAx = 4,
+    VSUBAy = 5,
+    VSUBAz = 6,
+    VSUBAw = 7,
+    VMADDAx = 8,
+    VMADDAy = 9,
+    VMADDAz = 10,
+    VMADDAw = 11,
+    VMSUBAx = 12,
+    VMSUBAy = 13,
+    VMSUBAz = 14,
+    VMSUBAw = 15,
+    VITOF0 = 16,
+    VITOF4 = 17,
+    VITOF12 = 18,
+    VITOF15 = 19,
+    VFTOI0 = 20,
+    VFTOI4 = 21,
+    VFTOI12 = 22,
+    VFTOI15 = 23,
+    VMULAx = 24,
+    VMULAy = 25,
+    VMULAz = 26,
+    VMULAw = 27,
+    VMULAq = 28,
+    VABS = 29,
+    VMULAi = 30,
+    VCLIPw = 31,
+    VADDAq = 32,
+    VMADDAq = 33,
+    VADDAi = 34,
+    VMADDAi = 35,
+    VSUBAq = 36,
+    VMSUBAq = 37,
+    VSUBAi = 38,
+    VMSUBAi = 39,
+    VADDA = 40,
+    VMADDA = 41,
+    VMULA = 42,
+    VSUBA = 44,
+    VMSUBA = 45,
+    VOPMULA = 46,
+    VNOP = 47,
+    VMOVE = 48,
+    VMR32 = 49,
+    VLQI = 52,
+    VSQI = 53,
+    VLQD = 54,
+    VSQD = 55,
+    VDIV = 56,
+    VSQRT = 57,
+    VRSQRT = 58,
+    VWAITQ = 59,
+    VMTIR = 60,
+    VMFIR = 61,
+    VILWR = 62,
+    VISWR = 63,
+    VRNEXT = 64,
+    VRGET = 65,
+    VRINIT = 66,
+    VRXOR = 67
+};
+
 //? ELF FILE STRUCTURES
 
 // Elf Header
@@ -295,7 +782,7 @@ std::string int_to_binary(int num);
 bool valid_arg(char* argument, std::string& arg, std::string& value);
 std::vector<int> bin_to_hex();
 int hex_to_asm(int argc, char* argv[]);
-// uint32_t parse_binary(std::vector<char>& buffer);
+// uint32_t parseBinary(std::vector<char>& buffer);
 // void assemble_r_instruction(uint32_t instruction);
 // void assemble_i_instruction(uint32_t instruction);
 // void assemble_j_instruction(uint32_t instruction);
@@ -460,7 +947,7 @@ class ELFParser {
         }
     }
 
-    uint32_t parse_binary(char* buffer) {
+    uint32_t parseBinary(char* buffer) {
         uint32_t instruction = 0;                  // Holds enough for 1 MIPS instruction
         instruction += uint32_t(buffer[3]) << 24;  // Move the first byte into position
         instruction += uint32_t(buffer[2]) << 16;  // Second byte
@@ -492,29 +979,42 @@ class ELFParser {
             // R | 6 opcode, 5 source1, 5 source2, 5 target, 5 shift, 6 function_code
             // I | 6 opcode, 5 source,  5 target, ___________ 16 immediate __________
             // J | 6 opcode, __________________ 26 pseudo_address ___________________
-            std::cout << "Position Before Read: " << file.tellg();
+            // std::cout << "Position Before Read: " << file.tellg();
             file.read(reinterpret_cast<char*>(char_array), sizeof(char_array));  // Read 32 bits
 
-            std::cout << "\nPosition After Read: " << file.tellg() << "\n";
+            // std::cout << "\nPosition After Read: " << file.tellg() << "\n";
             // Now we have the whole instruction
-            uint32_t instruction = parse_binary(char_array);  // Store as a general instruction
+            uint32_t raw_instruction = parseBinary(char_array);  // Store as a general instruction
 
             if (!isLittleEndian) {
-                instruction = swap32(instruction);
+                raw_instruction = swap32(raw_instruction);
             }
 
-            // Time to figure out what the instruction is supposed to do
-            // std::cout << std::hex << instruction << "\n";
-            int opcode = instruction >> 26;  // in binary
-
-            //? Maybe use dictionary for number to opcode lookup
-            //? Then use an array to store all the information for each opcode
-            if (0 == opcode) {  // We know it's an r-instruction
-                int function_code =
-                    (instruction << 26) >> 26;  // Removes all bits except those in function_code(last 6) section
-                std::cout << function_code << std::endl;
-            }
+            BinaryInstructionUniversal formatted_instruction = opcodeChecker(raw_instruction);
         }
+    }
+
+    BinaryInstructionUniversal opcodeChecker(uint32_t instruction) {
+        // Time to figure out what the instruction is supposed to do
+        // std::cout << std::hex << instruction << "\n";
+        int opcode = instruction >> 26;  // in binary
+
+        //? Use Enum Class and Switch Statement for opcode lookup
+        switch (opcode) {
+            // R-Type Instruction
+            case static_cast<int>(STANDARD_INSTRUCTIONS::REGISTER):
+                //* Should call a function to determine the specific Register-Type Instruction
+
+                // Removes all bits except those in function_code(last 6) section
+                // int function_code = (instruction << 26) >> 26;  //! Only exists within the scope of the swtich statement
+                // std::cout << function_code << std::endl;
+                break;
+            case static_cast<int>(STANDARD_INSTRUCTIONS::REGISTER_IMMEDIATE):
+
+                break;
+        }
+
+        return BinaryInstructionUniversal{'R', instruction};
     }
 };
 
@@ -543,7 +1043,7 @@ int main() {
 
     std::cout << "\nOffset 0x" << std::hex << testOffset << " maps to VAddr 0x" << addr << "\n";
     // std::vector<int> buffer = bin_to_hex();
-    // parse_binary(buffer);
+    // parseBinary(buffer);
 
     return 0;
 }
