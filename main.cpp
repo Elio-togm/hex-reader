@@ -29,31 +29,6 @@ struct BinaryInstructionJ {
     uint32_t pseudo_address;  // 26 bits
 };
 
-struct BinaryInstructionUniversal {
-    char instruction_type;
-    uint32_t instruction;  // The baseline instruction that everything should reference
-    BinaryInstructionR register_instruction = {
-        static_cast<uint8_t>(instruction >> 26),          // opcode
-        static_cast<uint8_t>((instruction << 6) >> 27),   // source register 1
-        static_cast<uint8_t>((instruction << 11) >> 27),  // source register 2
-        static_cast<uint8_t>((instruction << 16) >> 27),  // target register
-        static_cast<uint8_t>((instruction << 21) >> 27),  // shift value
-        static_cast<uint8_t>((instruction << 26) >> 26)   // function code
-    };
-
-    BinaryInstructionI immediate_instruction = {
-        static_cast<uint8_t>(instruction >> 26),            // opcode
-        static_cast<uint8_t>((instruction << 6) >> 26),     // source register
-        static_cast<uint8_t>((instruction << 11) >> 27),    // target register
-        static_cast<uint16_t>((instruction << 16) >> 16)     // immediate value
-    };
-
-    BinaryInstructionJ jump_instruction = {
-        static_cast<uint8_t>(instruction >> 26),            // opcode
-        (instruction << 6) >> 6                             // psuedo address
-    };
-};
-
 //? THE FOLLOWING SECTION IS INTEGER - OPCODE KEY - VALUE PAIRS
 
 // The Standard Opcodes and their integer representations
@@ -259,6 +234,29 @@ const std::map<int, std::string> COP2_SPECIAL2_INSTRUCTIONS{
     {49, "VMR32"},   {52, "VLQI"},    {53, "VSQI"},    {54, "VLQD"},    {55, "VSQD"},    {56, "VDIV"},
     {57, "VSQRT"},   {58, "VRSQRT"},  {59, "VWAITQ"},  {60, "VMTIR"},   {61, "VMFIR"},   {62, "VILWR"},
     {63, "VISWR"},   {64, "VRNEXT"},  {65, "VRGET"},   {66, "VRINIT"},  {67, "VRXOR"},
+};
+
+// Opcode Group names
+const std::map<int, std::string> OPCODE_GROUPS{
+    {0, "Standard"},
+    {1, "Register"},
+    {2, "Register Immediate"},
+    {3, "Multimedia Extensions"},
+    {4, "Multimedia Group 0"},
+    {5, "Multimedia Group 1"},
+    {6, "Multimedia Group 2"},
+    {7, "Multimedia Group 3"},
+    {8, "System Control Coprocessor"},
+    {9, "Branch on System Control Coprocessor"},
+    {10, "Translation Lookaside Buffer/Exceptions"},
+    {11, "Floating Point Unit Coprocessor"},
+    {12, "Branch on FPU Coprocessor"},
+    {13, "Single-Precision Floating Point Unit"},
+    {14, "Word Fixed-Point Floating Point Unit"},
+    {15, "Vector Processing Unit Coprocessor"},
+    {16, "Branch on VPU Coprocessor"},
+    {17, "VPU Extension 1"},
+    {18, "VPU Extension 2"},
 };
 
 //? Enumeration keyword for all above instructions
@@ -723,6 +721,87 @@ enum class COP2_SPECIAL2_INSTRUCTIONS : uint32_t {
     VRXOR = 67
 };
 
+// Opcode Group Names
+enum class OPCODE_GROUP : uint32_t {
+    STANDARD = 0,
+    REGISTER = 1,
+    REGISTER_IMMEDIATE = 2,
+    REGIMM = 2,
+    MULTIMEDIA_EXTENSIONS = 3,
+    MULTIMEDIA_GROUP_0 = 4,
+    MULTIMEDIA_GROUP_1 = 5,
+    MULTIMEDIA_GROUP_2 = 6,
+    MULTIMEDIA_GROUP_3 = 7,
+    COPROCESSOR_0 = 8,
+    COP0 = 8,
+    SYSTEM_CONTROL_COPROCESSOR = 8,
+    BRANCH_ON_COPROCESSOR_0 = 9,
+    BC0 = 9,
+    TLB = 10,
+    TRANSLATION_LOOKASIDE_BUFFER = 10,
+    EXCEPTIONS = 10,
+    COPROCESSOR_1 = 11,
+    COP1 = 11,
+    FLOATING_POINT_UNIT_COPROCESSOR = 11,
+    FPU = 11,
+    FLOATING_POINT_UNIT = 11,
+    BC1 = 12,
+    BRANCH_ON_COPROCESSOR_1 = 12,
+    FPU_S = 13,
+    FLOATING_POINT_UNIT_SINGLE_PRECISION = 13,
+    FPU_W = 14,
+    FLOATING_POINT_UNIT_WORD = 14,
+    COP2 = 15,
+    COPROCESSOR_2 = 15,
+    VPU = 15,
+    VECTOR_PROCESSING_UNIT_COPROCESSOR = 15,
+    VECTOR_PROCESSING_UNIT = 15,
+    BC2 = 16,
+    BRANCH_ON_COPROCESSOR_2 = 16,
+    COP2_EXTENSION_1 = 17,
+    COP2_SPECIAL_1 = 17,
+    COP2_EXTENSION_2 = 18,
+    COP2_SPECIAL_2 = 18,
+};
+
+//? Requires access to enums and maps above it
+
+struct BinaryInstructionUniversal {
+    char instruction_type;
+    uint32_t instruction;  // The baseline instruction that everything should reference
+    BinaryInstructionR register_instruction = {
+        static_cast<uint8_t>(instruction >> 26),          // opcode
+        static_cast<uint8_t>((instruction << 6) >> 27),   // source register 1
+        static_cast<uint8_t>((instruction << 11) >> 27),  // source register 2
+        static_cast<uint8_t>((instruction << 16) >> 27),  // target register
+        static_cast<uint8_t>((instruction << 21) >> 27),  // shift value
+        static_cast<uint8_t>((instruction << 26) >> 26)   // function code
+    };
+
+    BinaryInstructionI immediate_instruction = {
+        static_cast<uint8_t>(instruction >> 26),          // opcode
+        static_cast<uint8_t>((instruction << 6) >> 26),   // source register
+        static_cast<uint8_t>((instruction << 11) >> 27),  // target register
+        static_cast<uint16_t>((instruction << 16) >> 16)  // immediate value
+    };
+
+    BinaryInstructionJ jump_instruction = {
+        static_cast<uint8_t>(instruction >> 26),  // opcode
+        (instruction << 6) >> 6                   // psuedo address
+    };
+
+    OPCODE_GROUP opcode_group = OPCODE_GROUP::STANDARD;
+
+   private:
+    std::string opcode_group_name = OPCODE_GROUPS.at(static_cast<int>(opcode_group));
+
+   public:
+    void setOpcodeGroupName() { opcode_group_name = OPCODE_GROUPS.at(static_cast<int>(opcode_group)); }
+    std::string getOpcodeGroupName() { return opcode_group_name;}
+
+    BinaryInstructionUniversal(char c, uint32_t i) : instruction_type(c), instruction(i) {}
+};
+
 //? ELF FILE STRUCTURES
 
 // Elf Header
@@ -994,27 +1073,38 @@ class ELFParser {
         }
     }
 
+    // Identifies the Opcode to run for a given instruction, creating and returning a universal formatted binary
+    // instruction
     BinaryInstructionUniversal opcodeChecker(uint32_t instruction) {
         // Time to figure out what the instruction is supposed to do
         // std::cout << std::hex << instruction << "\n";
         int opcode = instruction >> 26;  // in binary
+        BinaryInstructionUniversal universal_instruction = {'I', instruction};
 
         //? Use Enum Class and Switch Statement for opcode lookup
         switch (opcode) {
             // R-Type Instruction
             case static_cast<int>(STANDARD_INSTRUCTIONS::REGISTER):
                 //* Should call a function to determine the specific Register-Type Instruction
-
+                universal_instruction.instruction_type = 'R';
                 // Removes all bits except those in function_code(last 6) section
-                // int function_code = (instruction << 26) >> 26;  //! Only exists within the scope of the swtich statement
-                // std::cout << function_code << std::endl;
+                // int function_code = (instruction << 26) >> 26;  //! Only exists within the scope of the swtich
+                // statement std::cout << function_code << std::endl;
                 break;
             case static_cast<int>(STANDARD_INSTRUCTIONS::REGISTER_IMMEDIATE):
 
                 break;
+            case static_cast<int>(STANDARD_INSTRUCTIONS::J):
+                universal_instruction.instruction_type = 'J';
+
+                break;
+            case static_cast<int>(STANDARD_INSTRUCTIONS::JAL):
+                universal_instruction.instruction_type = 'J';
+
+                break;
         }
 
-        return BinaryInstructionUniversal{'R', instruction};
+        return universal_instruction;
     }
 };
 
