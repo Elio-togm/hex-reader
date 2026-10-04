@@ -1,4 +1,5 @@
 #include <algorithm>
+#include <array>
 #include <cstdint>
 #include <cstring>
 #include <fstream>
@@ -6,6 +7,17 @@
 #include <map>
 #include <string>
 #include <vector>
+
+std::string int_to_hex(int num);
+// unsigned int hex_to_int(HexByte hex_value);
+std::string int_to_binary(int num);
+std::string int_to_binary(uint8_t num);
+std::string int_to_binary(uint16_t num);
+std::string int_to_binary(uint32_t num);
+bool valid_arg(char* argument, std::string& arg, std::string& value);
+std::vector<int> bin_to_hex();
+int hex_to_asm(int argc, char* argv[]);
+// uint32_t parseBinary(std::vector<char>& buffer);
 
 // All binary instructions for MIPS assembly code are 32 bits long.
 struct BinaryInstructionR {
@@ -15,6 +27,15 @@ struct BinaryInstructionR {
     uint8_t target_register;   // 5 bits
     uint8_t shift_value;       // 5 bits
     uint8_t function_code;     // 6 bits
+
+    BinaryInstructionR() {}
+    BinaryInstructionR(uint8_t o, uint8_t source1, uint8_t source2, uint8_t target, uint8_t shift, uint8_t function)
+        : opcode(o),
+          source_register1(source1),
+          source_register2(source2),
+          target_register(target),
+          shift_value(shift),
+          function_code(function) {}
 };
 
 struct BinaryInstructionI {
@@ -22,17 +43,24 @@ struct BinaryInstructionI {
     uint8_t source_register;   // 5 bits
     uint8_t target_register;   // 5 bits
     uint16_t immediate_value;  // 16 bits
+
+    BinaryInstructionI() {}
+    BinaryInstructionI(uint8_t o, uint8_t source, uint8_t target, uint16_t immediate)
+        : opcode(o), source_register(source), target_register(target), immediate_value(immediate) {}
 };
 
 struct BinaryInstructionJ {
     uint8_t opcode;           // 6 bits
     uint32_t pseudo_address;  // 26 bits
+
+    BinaryInstructionJ() {}
+    BinaryInstructionJ(uint8_t o, uint32_t address) : opcode(o), pseudo_address(address) {}
 };
 
 //? THE FOLLOWING SECTION IS INTEGER - OPCODE KEY - VALUE PAIRS
 
 // The Standard Opcodes and their integer representations
-const std::map<int, std::string> STANDARD_INSTRUCTIONS{
+const std::map<int, std::string> standard_instructions{
     {0, "Register"},
     {1, "Register Immediate"},
     {2, "J"},
@@ -89,7 +117,7 @@ const std::map<int, std::string> STANDARD_INSTRUCTIONS{
 };
 
 // The Register-Type Opcodes
-const std::map<int, std::string> REGISTER_INSTRUCTIONS{
+const std::map<int, std::string> register_instructions{
     {0, "SLL"},     {2, "SRL"},     {3, "SRA"},     {4, "SLLV"},     {6, "SRLV"},   {7, "SRAV"},   {8, "JR"},
     {9, "JALR"},    {10, "MOVZ"},   {11, "MOVN"},   {12, "SYSCALL"}, {13, "BREAK"}, {15, "SNYC"},  {16, "MFHI"},
     {17, "MTHI"},   {18, "MFLO"},   {19, "MTLO"},   {20, "DSLLV"},   {22, "DSRLV"}, {23, "DSRAV"}, {24, "MULT"},
@@ -101,14 +129,14 @@ const std::map<int, std::string> REGISTER_INSTRUCTIONS{
 };
 
 // The Register Immediate Opcodes
-const std::map<int, std::string> REGIMM_INSTRUCTIONS{
+const std::map<int, std::string> regimm_instructions{
     {0, "BLTZ"},     {1, "BGEZ"},     {2, "BLTZL"},  {3, "BGEZL"},  {8, "TGEI"},    {9, "TEGIU"},
     {10, "TLTI"},    {11, "TLTIU"},   {12, "TEQI"},  {14, "TNEI"},  {16, "BLTZAL"}, {17, "BGEZAL"},
     {18, "BLTZALL"}, {19, "BGEZALL"}, {24, "MTSAB"}, {25, "MTSAH"},
 };
 
 // The Multimedia Extension Opcodes
-const std::map<int, std::string> MULTIMEDIA_INSTRUCTIONS{
+const std::map<int, std::string> multimedia_instructions{
     {0, "MADD"},   {1, "MADDU"},  {4, "PLZCW"},   {8, "MMI0 Group"},  {9, "MMI2 Group"},  {16, "MFHI1"},
     {17, "MTHI1"}, {18, "MFLO1"}, {19, "MTLO1"},  {24, "MULT1"},      {25, "MULTU1"},     {26, "DIV1"},
     {27, "DIVU1"}, {32, "MADD1"}, {33, "MADDU1"}, {40, "MMI1 Group"}, {41, "MMI3 Group"}, {44, "PSLLH"},
@@ -116,7 +144,7 @@ const std::map<int, std::string> MULTIMEDIA_INSTRUCTIONS{
 };
 
 // The Multimedia Group 0 Opcodes
-const std::map<int, std::string> MULTIMEDIA_GROUP_0{
+const std::map<int, std::string> multimedia_group_0{
     {0, "PADDW"},   {1, "PSUBW"},   {2, "PCGTW"},   {3, "PMAXW"},   {4, "PADDH"},   {5, "PSUBH"},   {6, "PCGTH"},
     {7, "PMAXH"},   {8, "PADDB"},   {9, "PSUBB"},   {10, "PCGTB"},  {16, "PADDSW"}, {17, "PSUBSW"}, {18, "PEXTLW"},
     {19, "PPACW"},  {20, "PADDSH"}, {21, "PSUBSH"}, {22, "PEXTLH"}, {23, "PPACH"},  {24, "PADDSB"}, {25, "PSUBSB"},
@@ -124,27 +152,28 @@ const std::map<int, std::string> MULTIMEDIA_GROUP_0{
 };
 
 // The Multimedia Group 1 Opcodes
-const std::map<int, std::string> MULTIMEDIA_GROUP_1{
+const std::map<int, std::string> multimedia_group_1{
     {1, "PABSW"},   {2, "PCEQW"},   {3, "PMINW"},   {4, "PADSBH"},  {5, "PABSH"},   {6, "PCEQH"},
     {7, "PMINH"},   {10, "PCEQB"},  {16, "PADDUW"}, {17, "PSUBUW"}, {18, "PEXTUW"}, {20, "PADDUH"},
     {21, "PSUBUH"}, {22, "PEXTUH"}, {24, "PADDUB"}, {25, "PSUBUB"}, {26, "PEXTUB"}, {27, "QFSRV"},
 };
 
 // The Multimedia Group 2 Opcodes
-const std::map<int, std::string> MULTIMEDIA_GROUP_2{
-    {0, "PMADDW"},  {2, "PSLLVW"}, {3, "PSRLVW"},  {4, "PMSUBW"},  {5, "PMFLO"},   {6, "PINTH"},  {8, "PMULTW"},
-    {9, "PDIVW"},   {10, "CPLYD"}, {12, "PMADDH"}, {13, "PHMADH"}, {14, "PAND"},   {15, "PXOR"},  {16, "PMSUBH"},
-    {17, "PHMSBH"}, {26, "PEXEH"}, {27, "PREVH"},  {28, "PMULTH"}, {29, "PDIVBW"}, {30, "PEXEW"}, {31, "PROT3W"},
+const std::map<int, std::string> multimedia_group_2{
+    {0, "PMADDW"},  {2, "PSLLVW"},  {3, "PSRLVW"},  {4, "PMSUBW"},  {8, "PMFHI"},   {9, "PMFLO"},  {10, "PINTH"},  
+    {12, "PMULTW"},  {13, "PDIVW"},   {14, "CPLYD"},  {16, "PMADDH"}, {17, "PHMADH"}, {18, "PAND"},  {19, "PXOR"},  
+    {20, "PMSUBH"}, {21, "PHMSBH"}, {26, "PEXEH"},  {27, "PREVH"},  {28, "PMULTH"}, {29, "PDIVBW"}, {30, "PEXEW"}, 
+    {31, "PROT3W"},
 };
 
 // The Multimedia Group 3 Opcodes
-const std::map<int, std::string> MULTIMEDIA_GROUP_3{
+const std::map<int, std::string> multimedia_group_3{
     {0, "PMADDUW"}, {3, "PSRAVW"}, {8, "PMTHI"}, {9, "PMTLO"},  {10, "PINTEH"}, {12, "PMULTUW"}, {13, "PDIVUW"},
     {14, "PCPYUD"}, {18, "POR"},   {19, "PNOR"}, {26, "PEXCH"}, {27, "PCPYH"},  {30, "PEXCW"},
 };
 
 // The System Control Coprocessor Opcodes
-const std::map<int, std::string> COPROCESSOR_0_INSTRUCTIONS{
+const std::map<int, std::string> coprocessor_0_instructions{
     {0, "MFC0"},
     {4, "MTC0"},
     {8, "Branch on Coprocessor 0"},
@@ -152,7 +181,7 @@ const std::map<int, std::string> COPROCESSOR_0_INSTRUCTIONS{
 };
 
 // The Branchon Coprocessor 0 Opcodes
-const std::map<int, std::string> BC0_INSTRUCTIONS{
+const std::map<int, std::string> bc0_instructions{
     {0, "BC0F"},
     {1, "BC0T"},
     {2, "BC0FL"},
@@ -160,12 +189,12 @@ const std::map<int, std::string> BC0_INSTRUCTIONS{
 };
 
 // The Translation Lookaside Buffer/Exception Opcodes
-const std::map<int, std::string> TLB_EXCEPTION_INSTRUCTIONS{
+const std::map<int, std::string> tlb_exception_instructions{
     {1, "TLBR"}, {2, "TLBWI"}, {6, "TLBWR"}, {8, "TLBP"}, {24, "ERET"}, {56, "EI"}, {57, "DI"},
 };
 
 // The Floating Point Unit Opcodes
-const std::map<int, std::string> COPROCESSOR_1_INSTRUCTIONS{
+const std::map<int, std::string> coprocessor_1_instructions{
     {0, "MFC1"},
     {2, "CFC1"},
     {4, "MTC1"},
@@ -176,7 +205,7 @@ const std::map<int, std::string> COPROCESSOR_1_INSTRUCTIONS{
 };
 
 // The Branch on Coprocessor 1 Opcodes
-const std::map<int, std::string> BC1_INSTRUCTIONS{
+const std::map<int, std::string> bc1_instructions{
     {0, "BC1F"},
     {1, "BC1T"},
     {2, "BC1FL"},
@@ -184,25 +213,28 @@ const std::map<int, std::string> BC1_INSTRUCTIONS{
 };
 
 // The Single-Precision Floating Point Unit Opcodes
-const std::map<int, std::string> FPU_S_INSTRUCTIONS{
+const std::map<int, std::string> fpu_s_instructions{
     {0, "ADD.S"},   {1, "SUB.S"},   {2, "MUL.S"},    {3, "DIV.S"},    {4, "SQRT.S"},  {5, "ABS.S"},
     {6, "MOV.S"},   {7, "NEG.S"},   {22, "RSQRT.S"}, {24, "ADDA.S"},  {25, "SUBA.S"}, {26, "MULA.S"},
-    {28, "MADD.S"}, {29, "MSUB.S"}, {30, "MADDA.S"}, {31, "MSUBA.S"}, {40, "MAX.S"},  {41, "MIN.S"},
-    {48, "C.F"},    {50, "C.EQ"},   {52, "C.LT"},    {54, "C.LE"},
+    {28, "MADD.S"}, {29, "MSUB.S"}, {30, "MADDA.S"}, {31, "MSUBA.S"}, {36, "CVT.W"}, {40, "MAX.S"},  
+    {41, "MIN.S"}, {48, "C.F"},    {50, "C.EQ"},   {52, "C.LT"},    {54, "C.LE"},
 };
 
 // The Word Fixed-Point Floating Point Unit Opcodes
-const std::map<int, std::string> FPU_W_INSTRUCTIONS{
+const std::map<int, std::string> fpu_w_instructions{
     {32, "CVT.S"},
 };
 
 // The Vector Processing Unit Opcodes
-const std::map<int, std::string> COPROCESSOR_2_INSTRUCTIONS{
-    {1, "QMFC2"}, {2, "CFC2"}, {5, "QMTC2"}, {6, "CTC2"}, {8, "Branch on Coprocessor 2"}, {16, "Special 1"},
-};
+const std::map<int, std::string> coprocessor_2_instructions{
+    {1, "QMFC2"},      {2, "CFC2"},       {5, "QMTC2"},      {6, "CTC2"},       {8, "Branch on Coprocessor 2"},
+    {16, "Special 1"}, {17, "Special 1"}, {18, "Special 1"}, {19, "Special 1"}, {20, "Special 1"},
+    {21, "Special 1"}, {22, "Special 1"}, {23, "Special 1"}, {24, "Special 1"}, {25, "Special 1"},
+    {26, "Special 1"}, {27, "Special 1"}, {28, "Special 1"}, {29, "Special 1"}, {30, "Special 1"},
+    {31, "Special 1"}};
 
 // The Branch on Coprocessor 2 Opcodes
-const std::map<int, std::string> BC2_INSTRUCTIONS{
+const std::map<int, std::string> bc2_instructions{
     {0, "BC2F"},
     {1, "BC2T"},
     {2, "BC2FL"},
@@ -210,19 +242,20 @@ const std::map<int, std::string> BC2_INSTRUCTIONS{
 };
 
 // The VPU 1st Extension Opcodes
-const std::map<int, std::string> COP2_SPECIAL1_INSTRUCTIONS{
-    {0, "VADDx"},   {1, "VADDy"},   {2, "VADDz"},   {3, "VADDw"},   {4, "VSUBx"},    {5, "VSUBy"},    {6, "VSUBz"},
-    {7, "VSUBw"},   {8, "VMADDx"},  {9, "VMADDy"},  {10, "VMADDz"}, {11, "VMADDw"},  {12, "VMSUBx"},  {13, "VMSUBy"},
-    {14, "VMSUBz"}, {15, "VMSUBw"}, {16, "VMAXx"},  {17, "VMAXy"},  {18, "VMAXz"},   {19, "VMAXw"},   {20, "VMINIx"},
-    {21, "VMINIy"}, {22, "VMINIz"}, {23, "VMINIw"}, {24, "VMULx"},  {25, "VMULy"},   {26, "VMULz"},   {27, "VMULw"},
-    {28, "VMULq"},  {29, "VMAXi"},  {30, "VMULi"},  {31, "VMINIi"}, {32, "VADDq"},   {33, "VMADDq"},  {34, "VADDi"},
-    {35, "VMADDi"}, {36, "VSUBq"},  {37, "VMSUBq"}, {38, "VSUBi"},  {39, "VMSUBi"},  {40, "VADD"},    {41, "VMADD"},
-    {42, "VMUL"},   {43, "VMAX"},   {44, "VSUB"},   {45, "VMSUB"},  {46, "VOPMSUB"}, {47, "VMINI"},   {48, "VIADD"},
-    {49, "VISUB"},  {50, "VIADDI"}, {52, "VIAND"},  {53, "VIOR"},   {56, "VCALLMS"}, {57, "CALLMSR"}, {60, "Special 2"},
-};
+const std::map<int, std::string> cop2_special1_instructions{
+    {0, "VADDx"},    {1, "VADDy"},      {2, "VADDz"},      {3, "VADDw"},      {4, "VSUBx"},     {5, "VSUBy"},
+    {6, "VSUBz"},    {7, "VSUBw"},      {8, "VMADDx"},     {9, "VMADDy"},     {10, "VMADDz"},   {11, "VMADDw"},
+    {12, "VMSUBx"},  {13, "VMSUBy"},    {14, "VMSUBz"},    {15, "VMSUBw"},    {16, "VMAXx"},    {17, "VMAXy"},
+    {18, "VMAXz"},   {19, "VMAXw"},     {20, "VMINIx"},    {21, "VMINIy"},    {22, "VMINIz"},   {23, "VMINIw"},
+    {24, "VMULx"},   {25, "VMULy"},     {26, "VMULz"},     {27, "VMULw"},     {28, "VMULq"},    {29, "VMAXi"},
+    {30, "VMULi"},   {31, "VMINIi"},    {32, "VADDq"},     {33, "VMADDq"},    {34, "VADDi"},    {35, "VMADDi"},
+    {36, "VSUBq"},   {37, "VMSUBq"},    {38, "VSUBi"},     {39, "VMSUBi"},    {40, "VADD"},     {41, "VMADD"},
+    {42, "VMUL"},    {43, "VMAX"},      {44, "VSUB"},      {45, "VMSUB"},     {46, "VOPMSUB"},  {47, "VMINI"},
+    {48, "VIADD"},   {49, "VISUB"},     {50, "VIADDI"},    {52, "VIAND"},     {53, "VIOR"},     {56, "VCALLMS"},
+    {57, "CALLMSR"}, {60, "Special 2"}, {61, "Special 2"}, {62, "Special 2"}, {63, "Special 2"}};
 
 // The VPU 2nd Extension Opcodes
-const std::map<int, std::string> COP2_SPECIAL2_INSTRUCTIONS{
+const std::map<int, std::string> cop2_special2_instructions{
     {0, "VADDAx"},   {1, "VADDAy"},   {2, "VADDAz"},   {3, "VADDAw"},   {4, "VSUBAx"},   {5, "VSUBAy"},
     {6, "VSUBAz"},   {7, "VSUBAw"},   {8, "VMADDAx"},  {9, "VMADDAy"},  {10, "VMADDAz"}, {11, "VMADDAw"},
     {12, "VMSUBAx"}, {13, "VMSUBAy"}, {14, "VMSUBAz"}, {15, "VMSUBAw"}, {16, "VITOF0"},  {17, "VITOF4"},
@@ -237,7 +270,7 @@ const std::map<int, std::string> COP2_SPECIAL2_INSTRUCTIONS{
 };
 
 // Opcode Group names
-const std::map<int, std::string> OPCODE_GROUPS{
+const std::map<int, std::string> opcode_groups{
     {0, "Standard"},
     {1, "Register"},
     {2, "Register Immediate"},
@@ -280,7 +313,7 @@ enum class STANDARD_INSTRUCTIONS : uint32_t {
     XORI = 14,
     LUI = 15,
     SYSTEM_CONTROL_COPROCESSOR = 16,
-    FLOATING_POINT_SINGLE_PRECISION_COPROCESSOR = 17,
+    FLOATING_POINT_UNIT_COPROCESSOR = 17,
     VECTOR_POINT_UNIT_COPROCESSOR = 18,
     BEQL = 20,
     BNEL = 21,
@@ -478,17 +511,18 @@ enum class MULTIMEDIA_GROUP_2 : uint32_t {
     PSLLVW = 2,
     PSRLVW = 3,
     PMSUBW = 4,
-    PMFLO = 5,
-    PINTH = 6,
-    PMULTW = 8,
-    PDIVW = 9,
-    CPLYD = 10,
-    PMADDH = 12,
-    PHMADH = 13,
-    PAND = 14,
-    PXOR = 15,
-    PMSUBH = 16,
-    PHMSBH = 17,
+    PMFHI = 8,
+    PMFLO = 9,
+    PINTH = 10,
+    PMULTW = 12,
+    PDIVW = 13,
+    PCPLYD = 14,
+    PMADDH = 16,
+    PHMADH = 17,
+    PAND = 18,
+    PXOR = 19,
+    PMSUBH = 20,
+    PHMSBH = 21,
     PEXEH = 26,
     PREVH = 27,
     PMULTH = 28,
@@ -568,6 +602,7 @@ enum class FPU_S_INSTRUCTIONS : uint32_t {
     MSUB_S = 29,
     MADDA_S = 30,
     MSUBA_S = 31,
+    CVT_W = 36,
     MAX_S = 40,
     MIN_S = 41,
     C_F = 48,
@@ -586,7 +621,22 @@ enum class COPROCESSOR_2_INSTRUCTIONS : uint32_t {
     QMTC2 = 5,
     CTC2 = 6,
     BRANCH_ON_COPROCESSOR_2 = 8,
-    SPECIAL_1 = 16
+    SPECIAL1_1 = 16,
+    SPECIAL1_2 = 17,
+    SPECIAL1_3 = 18,
+    SPECIAL1_4 = 19,
+    SPECIAL1_5 = 20,
+    SPECIAL1_6 = 21,
+    SPECIAL1_7 = 22,
+    SPECIAL1_8 = 23,
+    SPECIAL1_9 = 24,
+    SPECIAL1_10 = 25,
+    SPECIAL1_11 = 26,
+    SPECIAL1_12 = 27,
+    SPECIAL1_13 = 28,
+    SPECIAL1_14 = 29,
+    SPECIAL1_15 = 30,
+    SPECIAL1_16 = 31,
 };
 
 // The Branch on Coprocessor 2 Opcodes
@@ -649,7 +699,10 @@ enum class COP2_SPECIAL1_INSTRUCTIONS : uint32_t {
     VIOR = 53,
     VCALLMS = 56,
     CALLMSR = 57,
-    SPECIAL_2 = 60
+    SPECIAL2_1 = 60,
+    SPECIAL2_2 = 61,
+    SPECIAL2_3 = 62,
+    SPECIAL2_4 = 63
 };
 
 // The VPU 2nd Extension Opcodes
@@ -759,16 +812,251 @@ enum class OPCODE_GROUP : uint32_t {
     BC2 = 16,
     BRANCH_ON_COPROCESSOR_2 = 16,
     COP2_EXTENSION_1 = 17,
-    COP2_SPECIAL_1 = 17,
+    COP2_SPECIAL1_ = 17,
     COP2_EXTENSION_2 = 18,
-    COP2_SPECIAL_2 = 18,
+    COP2_SPECIAL2_ = 18,
 };
+
+//? Arrays referring to the above ENUM CLASSES containing all the same values
+
+constexpr std::array<STANDARD_INSTRUCTIONS, static_cast<int>(56)> Standard_Instructions = {
+    STANDARD_INSTRUCTIONS::REGISTER,
+    STANDARD_INSTRUCTIONS::REGISTER_IMMEDIATE,
+    STANDARD_INSTRUCTIONS::J,
+    STANDARD_INSTRUCTIONS::JAL,
+    STANDARD_INSTRUCTIONS::BEQ,
+    STANDARD_INSTRUCTIONS::BNE,
+    STANDARD_INSTRUCTIONS::BLEZ,
+    STANDARD_INSTRUCTIONS::BGTZ,
+    STANDARD_INSTRUCTIONS::ADDI,
+    STANDARD_INSTRUCTIONS::ADDIU,
+    STANDARD_INSTRUCTIONS::SLTI,
+    STANDARD_INSTRUCTIONS::SLTIU,
+    STANDARD_INSTRUCTIONS::ANDI,
+    STANDARD_INSTRUCTIONS::ORI,
+    STANDARD_INSTRUCTIONS::XORI,
+    STANDARD_INSTRUCTIONS::LUI,
+    STANDARD_INSTRUCTIONS::SYSTEM_CONTROL_COPROCESSOR,
+    STANDARD_INSTRUCTIONS::FLOATING_POINT_UNIT_COPROCESSOR,
+    STANDARD_INSTRUCTIONS::VECTOR_POINT_UNIT_COPROCESSOR,
+    STANDARD_INSTRUCTIONS::BEQL,
+    STANDARD_INSTRUCTIONS::BNEL,
+    STANDARD_INSTRUCTIONS::BLEZL,
+    STANDARD_INSTRUCTIONS::BGTZL,
+    STANDARD_INSTRUCTIONS::DADDI,
+    STANDARD_INSTRUCTIONS::DADDIU,
+    STANDARD_INSTRUCTIONS::LDL,
+    STANDARD_INSTRUCTIONS::LDR,
+    STANDARD_INSTRUCTIONS::MULTIMEDIA_EXTENSIONS,
+    STANDARD_INSTRUCTIONS::LQ,
+    STANDARD_INSTRUCTIONS::SQ,
+    STANDARD_INSTRUCTIONS::LB,
+    STANDARD_INSTRUCTIONS::LH,
+    STANDARD_INSTRUCTIONS::LWL,
+    STANDARD_INSTRUCTIONS::LW,
+    STANDARD_INSTRUCTIONS::LBU,
+    STANDARD_INSTRUCTIONS::LHU,
+    STANDARD_INSTRUCTIONS::LWR,
+    STANDARD_INSTRUCTIONS::LWU,
+    STANDARD_INSTRUCTIONS::SB,
+    STANDARD_INSTRUCTIONS::SH,
+    STANDARD_INSTRUCTIONS::SWL,
+    STANDARD_INSTRUCTIONS::SW,
+    STANDARD_INSTRUCTIONS::SDL,
+    STANDARD_INSTRUCTIONS::SDR,
+    STANDARD_INSTRUCTIONS::SWR,
+    STANDARD_INSTRUCTIONS::CACHE,
+    STANDARD_INSTRUCTIONS::LWC1,
+    STANDARD_INSTRUCTIONS::PREF,
+    STANDARD_INSTRUCTIONS::LQC2,
+    STANDARD_INSTRUCTIONS::LD,
+    STANDARD_INSTRUCTIONS::SWC1,
+    STANDARD_INSTRUCTIONS::SQC2,
+    STANDARD_INSTRUCTIONS::SD};
+
+constexpr std::array<REGISTER_INSTRUCTIONS, static_cast<int>(52)> Register_Instructions = {
+    REGISTER_INSTRUCTIONS::SLL,   REGISTER_INSTRUCTIONS::SRL,     REGISTER_INSTRUCTIONS::SRA,
+    REGISTER_INSTRUCTIONS::SLLV,  REGISTER_INSTRUCTIONS::SRLV,    REGISTER_INSTRUCTIONS::SRAV,
+    REGISTER_INSTRUCTIONS::JR,    REGISTER_INSTRUCTIONS::JALR,    REGISTER_INSTRUCTIONS::MOVZ,
+    REGISTER_INSTRUCTIONS::MOVN,  REGISTER_INSTRUCTIONS::SYSCALL, REGISTER_INSTRUCTIONS::BREAK,
+    REGISTER_INSTRUCTIONS::SNYC,  REGISTER_INSTRUCTIONS::MFHI,    REGISTER_INSTRUCTIONS::MTHI,
+    REGISTER_INSTRUCTIONS::MFLO,  REGISTER_INSTRUCTIONS::MTLO,    REGISTER_INSTRUCTIONS::DSLLV,
+    REGISTER_INSTRUCTIONS::DSRLV, REGISTER_INSTRUCTIONS::DSRAV,   REGISTER_INSTRUCTIONS::MULT,
+    REGISTER_INSTRUCTIONS::MULTU, REGISTER_INSTRUCTIONS::DIV,     REGISTER_INSTRUCTIONS::DIVU,
+    REGISTER_INSTRUCTIONS::ADD,   REGISTER_INSTRUCTIONS::ADDU,    REGISTER_INSTRUCTIONS::SUB,
+    REGISTER_INSTRUCTIONS::SUBU,  REGISTER_INSTRUCTIONS::AND,     REGISTER_INSTRUCTIONS::OR,
+    REGISTER_INSTRUCTIONS::XOR,   REGISTER_INSTRUCTIONS::NOR,     REGISTER_INSTRUCTIONS::MFSA,
+    REGISTER_INSTRUCTIONS::MTSA,  REGISTER_INSTRUCTIONS::SLT,     REGISTER_INSTRUCTIONS::SLTU,
+    REGISTER_INSTRUCTIONS::DADD,  REGISTER_INSTRUCTIONS::DADDU,   REGISTER_INSTRUCTIONS::DSUB,
+    REGISTER_INSTRUCTIONS::DSUBU, REGISTER_INSTRUCTIONS::TGE,     REGISTER_INSTRUCTIONS::TGEU,
+    REGISTER_INSTRUCTIONS::TLT,   REGISTER_INSTRUCTIONS::TLTU,    REGISTER_INSTRUCTIONS::TEQ,
+    REGISTER_INSTRUCTIONS::TNE,   REGISTER_INSTRUCTIONS::DSLL,    REGISTER_INSTRUCTIONS::DSRL,
+    REGISTER_INSTRUCTIONS::DSRA,  REGISTER_INSTRUCTIONS::DSLL32,  REGISTER_INSTRUCTIONS::DSRL32,
+    REGISTER_INSTRUCTIONS::DSRA32};
+
+constexpr std::array<REGIMM_INSTRUCTIONS, static_cast<int>(16)> Regimm_Instructions = {
+    REGIMM_INSTRUCTIONS::BLTZ,    REGIMM_INSTRUCTIONS::BGEZ,    REGIMM_INSTRUCTIONS::BLTZL,
+    REGIMM_INSTRUCTIONS::BGEZL,   REGIMM_INSTRUCTIONS::TGEI,    REGIMM_INSTRUCTIONS::TGEIU,
+    REGIMM_INSTRUCTIONS::TLTI,    REGIMM_INSTRUCTIONS::TLTIU,   REGIMM_INSTRUCTIONS::TEQI,
+    REGIMM_INSTRUCTIONS::TNEI,    REGIMM_INSTRUCTIONS::BLTZAL,  REGIMM_INSTRUCTIONS::BGEZAL,
+    REGIMM_INSTRUCTIONS::BLTZALL, REGIMM_INSTRUCTIONS::BGEZALL, REGIMM_INSTRUCTIONS::MTSAB,
+    REGIMM_INSTRUCTIONS::MTSAH};
+
+constexpr std::array<MULTIMEDIA_INSTRUCTIONS, static_cast<int>(24)> Multimedia_Instructions = {
+    MULTIMEDIA_INSTRUCTIONS::MADD,       MULTIMEDIA_INSTRUCTIONS::MADDU,      MULTIMEDIA_INSTRUCTIONS::PLZCW,
+    MULTIMEDIA_INSTRUCTIONS::MMI0_GROUP, MULTIMEDIA_INSTRUCTIONS::MMI2_GROUP, MULTIMEDIA_INSTRUCTIONS::MFHI1,
+    MULTIMEDIA_INSTRUCTIONS::MTHI1,      MULTIMEDIA_INSTRUCTIONS::MFLO1,      MULTIMEDIA_INSTRUCTIONS::MTLO1,
+    MULTIMEDIA_INSTRUCTIONS::MULT1,      MULTIMEDIA_INSTRUCTIONS::MULTU1,     MULTIMEDIA_INSTRUCTIONS::DIV1,
+    MULTIMEDIA_INSTRUCTIONS::DIVU1,      MULTIMEDIA_INSTRUCTIONS::MADD1,      MULTIMEDIA_INSTRUCTIONS::MADDU1,
+    MULTIMEDIA_INSTRUCTIONS::MMI1_GROUP, MULTIMEDIA_INSTRUCTIONS::MMI3_GROUP, MULTIMEDIA_INSTRUCTIONS::PSLLH,
+    MULTIMEDIA_INSTRUCTIONS::PSRLH,      MULTIMEDIA_INSTRUCTIONS::PSRAH,      MULTIMEDIA_INSTRUCTIONS::PSLLW,
+    MULTIMEDIA_INSTRUCTIONS::PSRLW,      MULTIMEDIA_INSTRUCTIONS::PSRAW};
+
+constexpr std::array<MULTIMEDIA_GROUP_0, static_cast<int>(26)> Multimedia_Group_0 = {
+    MULTIMEDIA_GROUP_0::PADDW,  MULTIMEDIA_GROUP_0::PSUBW,  MULTIMEDIA_GROUP_0::PCGTW, MULTIMEDIA_GROUP_0::PMAXW,
+    MULTIMEDIA_GROUP_0::PADDH,  MULTIMEDIA_GROUP_0::PSUBH,  MULTIMEDIA_GROUP_0::PCGTH, MULTIMEDIA_GROUP_0::PMAXH,
+    MULTIMEDIA_GROUP_0::PADDB,  MULTIMEDIA_GROUP_0::PSUBB,  MULTIMEDIA_GROUP_0::PCGTB, MULTIMEDIA_GROUP_0::PADDSW,
+    MULTIMEDIA_GROUP_0::PSUBSW, MULTIMEDIA_GROUP_0::PEXTLW, MULTIMEDIA_GROUP_0::PPACW, MULTIMEDIA_GROUP_0::PADDSH,
+    MULTIMEDIA_GROUP_0::PSUBSH, MULTIMEDIA_GROUP_0::PEXTLH, MULTIMEDIA_GROUP_0::PPACH, MULTIMEDIA_GROUP_0::PADDSB,
+    MULTIMEDIA_GROUP_0::PSUBSB, MULTIMEDIA_GROUP_0::PEXTLB, MULTIMEDIA_GROUP_0::PPACB, MULTIMEDIA_GROUP_0::PEXT5,
+    MULTIMEDIA_GROUP_0::PPAC5};
+
+constexpr std::array<MULTIMEDIA_GROUP_1, static_cast<int>(18)> Multimedia_Group_1 = {
+    MULTIMEDIA_GROUP_1::PABSW,  MULTIMEDIA_GROUP_1::PCEQW,  MULTIMEDIA_GROUP_1::PMINW,  MULTIMEDIA_GROUP_1::PADSBH,
+    MULTIMEDIA_GROUP_1::PABSH,  MULTIMEDIA_GROUP_1::PCEQH,  MULTIMEDIA_GROUP_1::PMINH,  MULTIMEDIA_GROUP_1::PCEQB,
+    MULTIMEDIA_GROUP_1::PADDUW, MULTIMEDIA_GROUP_1::PSUBUW, MULTIMEDIA_GROUP_1::PEXTUW, MULTIMEDIA_GROUP_1::PADDUH,
+    MULTIMEDIA_GROUP_1::PSUBUH, MULTIMEDIA_GROUP_1::PEXTUH, MULTIMEDIA_GROUP_1::PADDUB, MULTIMEDIA_GROUP_1::PSUBUB,
+    MULTIMEDIA_GROUP_1::PEXTUB, MULTIMEDIA_GROUP_1::QFSRV};
+
+constexpr std::array<MULTIMEDIA_GROUP_2, static_cast<int>(22)> Multimedia_Group_2 = {
+    MULTIMEDIA_GROUP_2::PMADDW, MULTIMEDIA_GROUP_2::PSLLVW, MULTIMEDIA_GROUP_2::PSRLVW, MULTIMEDIA_GROUP_2::PMSUBW,
+    MULTIMEDIA_GROUP_2::PMFHI,  MULTIMEDIA_GROUP_2::PMFLO,  MULTIMEDIA_GROUP_2::PINTH,  MULTIMEDIA_GROUP_2::PMULTW,
+    MULTIMEDIA_GROUP_2::PDIVW,  MULTIMEDIA_GROUP_2::PCPLYD, MULTIMEDIA_GROUP_2::PMADDH, MULTIMEDIA_GROUP_2::PHMADH,
+    MULTIMEDIA_GROUP_2::PAND,   MULTIMEDIA_GROUP_2::PXOR,   MULTIMEDIA_GROUP_2::PMSUBH, MULTIMEDIA_GROUP_2::PHMSBH,
+    MULTIMEDIA_GROUP_2::PEXEH,  MULTIMEDIA_GROUP_2::PREVH,  MULTIMEDIA_GROUP_2::PMULTH, MULTIMEDIA_GROUP_2::PDIVBW,
+    MULTIMEDIA_GROUP_2::PEXEW,  MULTIMEDIA_GROUP_2::PROT3W};
+
+constexpr std::array<MULTIMEDIA_GROUP_3, static_cast<int>(13)> Multimedia_Group_3 = {
+    MULTIMEDIA_GROUP_3::PMADDUW, MULTIMEDIA_GROUP_3::PSRAVW,  MULTIMEDIA_GROUP_3::PMTHI,  MULTIMEDIA_GROUP_3::PMTLO,
+    MULTIMEDIA_GROUP_3::PINTEH,  MULTIMEDIA_GROUP_3::PMULTUW, MULTIMEDIA_GROUP_3::PDIVUW, MULTIMEDIA_GROUP_3::PCPYUD,
+    MULTIMEDIA_GROUP_3::POR,     MULTIMEDIA_GROUP_3::PNOR,    MULTIMEDIA_GROUP_3::PEXCH,  MULTIMEDIA_GROUP_3::PCPYH,
+    MULTIMEDIA_GROUP_3::PEXCW};
+
+constexpr std::array<COPROCESSOR_0_INSTRUCTIONS, static_cast<int>(4)> Coprocessor_0_Instructions = {
+    COPROCESSOR_0_INSTRUCTIONS::MFC0, COPROCESSOR_0_INSTRUCTIONS::MTC0,
+    COPROCESSOR_0_INSTRUCTIONS::BRANCH_ON_COPROCESSOR_0,
+    COPROCESSOR_0_INSTRUCTIONS::TRANSLATION_LOOKASIDE_BUFFER_EXCEPTIONS};
+
+constexpr std::array<BC0_INSTRUCTIONS, static_cast<int>(4)> Bc0_Instructions = {
+    BC0_INSTRUCTIONS::BC0F, BC0_INSTRUCTIONS::BC0T, BC0_INSTRUCTIONS::BC0FL, BC0_INSTRUCTIONS::BC0TL};
+
+constexpr std::array<TLB_EXCEPTION_INSTRUCTIONS, static_cast<int>(7)> Tlb_Exception_Instructions = {
+    TLB_EXCEPTION_INSTRUCTIONS::TLBR, TLB_EXCEPTION_INSTRUCTIONS::TLBWI, TLB_EXCEPTION_INSTRUCTIONS::TLBWR,
+    TLB_EXCEPTION_INSTRUCTIONS::TLBP, TLB_EXCEPTION_INSTRUCTIONS::ERET,  TLB_EXCEPTION_INSTRUCTIONS::EI,
+    TLB_EXCEPTION_INSTRUCTIONS::DI};
+
+constexpr std::array<COPROCESSOR_1_INSTRUCTIONS, static_cast<int>(7)> COP1_Instructions = {
+    COPROCESSOR_1_INSTRUCTIONS::MFC1,
+    COPROCESSOR_1_INSTRUCTIONS::CFC1,
+    COPROCESSOR_1_INSTRUCTIONS::MTC1,
+    COPROCESSOR_1_INSTRUCTIONS::CTC1,
+    COPROCESSOR_1_INSTRUCTIONS::BRANCH_ON_COPROCESSOR_1,
+    COPROCESSOR_1_INSTRUCTIONS::FLOATING_POINT_UNIT_SINGLE_PRECISION,
+    COPROCESSOR_1_INSTRUCTIONS::FLOATING_POINT_UNIT_WORD};
+
+constexpr std::array<BC1_INSTRUCTIONS, static_cast<int>(4)> Bc1_Instructions = {
+    BC1_INSTRUCTIONS::BC1F, BC1_INSTRUCTIONS::BC1T, BC1_INSTRUCTIONS::BC1FL, BC1_INSTRUCTIONS::BC1TL};
+
+constexpr std::array<FPU_S_INSTRUCTIONS, static_cast<int>(24)> Fpu_S_Instructions = {
+    FPU_S_INSTRUCTIONS::ADD_S,   FPU_S_INSTRUCTIONS::SUB_S,  FPU_S_INSTRUCTIONS::MUL_S,   FPU_S_INSTRUCTIONS::DIV_S,
+    FPU_S_INSTRUCTIONS::SQRT_S,  FPU_S_INSTRUCTIONS::ABS_S,  FPU_S_INSTRUCTIONS::MOV_S,   FPU_S_INSTRUCTIONS::NEG_S,
+    FPU_S_INSTRUCTIONS::RSQRT_S, FPU_S_INSTRUCTIONS::ADDA_S, FPU_S_INSTRUCTIONS::SUBA_S,  FPU_S_INSTRUCTIONS::MULA_S,
+    FPU_S_INSTRUCTIONS::MADD_S,  FPU_S_INSTRUCTIONS::MSUB_S, FPU_S_INSTRUCTIONS::MADDA_S, FPU_S_INSTRUCTIONS::MSUBA_S,
+    FPU_S_INSTRUCTIONS::CVT_W,   FPU_S_INSTRUCTIONS::MAX_S,  FPU_S_INSTRUCTIONS::MIN_S,   FPU_S_INSTRUCTIONS::C_F,
+    FPU_S_INSTRUCTIONS::C_EQ,    FPU_S_INSTRUCTIONS::C_LT,   FPU_S_INSTRUCTIONS::C_LE};
+
+constexpr std::array<FPU_W_INSTRUCTIONS, static_cast<int>(1)> Fpu_W_Instructions = {FPU_W_INSTRUCTIONS::CVT_S};
+
+constexpr std::array<COPROCESSOR_2_INSTRUCTIONS, static_cast<int>(21)> Coprocessor_2_Instructions = {
+    COPROCESSOR_2_INSTRUCTIONS::QMFC2,
+    COPROCESSOR_2_INSTRUCTIONS::CFC2,
+    COPROCESSOR_2_INSTRUCTIONS::QMTC2,
+    COPROCESSOR_2_INSTRUCTIONS::CTC2,
+    COPROCESSOR_2_INSTRUCTIONS::BRANCH_ON_COPROCESSOR_2,
+    COPROCESSOR_2_INSTRUCTIONS::SPECIAL1_1,
+    COPROCESSOR_2_INSTRUCTIONS::SPECIAL1_2,
+    COPROCESSOR_2_INSTRUCTIONS::SPECIAL1_3,
+    COPROCESSOR_2_INSTRUCTIONS::SPECIAL1_4,
+    COPROCESSOR_2_INSTRUCTIONS::SPECIAL1_5,
+    COPROCESSOR_2_INSTRUCTIONS::SPECIAL1_6,
+    COPROCESSOR_2_INSTRUCTIONS::SPECIAL1_7,
+    COPROCESSOR_2_INSTRUCTIONS::SPECIAL1_8,
+    COPROCESSOR_2_INSTRUCTIONS::SPECIAL1_9,
+    COPROCESSOR_2_INSTRUCTIONS::SPECIAL1_10,
+    COPROCESSOR_2_INSTRUCTIONS::SPECIAL1_11,
+    COPROCESSOR_2_INSTRUCTIONS::SPECIAL1_12,
+    COPROCESSOR_2_INSTRUCTIONS::SPECIAL1_13,
+    COPROCESSOR_2_INSTRUCTIONS::SPECIAL1_14,
+    COPROCESSOR_2_INSTRUCTIONS::SPECIAL1_15,
+    COPROCESSOR_2_INSTRUCTIONS::SPECIAL1_16};
+
+constexpr std::array<BC2_INSTRUCTIONS, static_cast<int>(4)> Bc2_Instructions = {
+    BC2_INSTRUCTIONS::BC2F, BC2_INSTRUCTIONS::BC2T, BC2_INSTRUCTIONS::BC2FL, BC2_INSTRUCTIONS::BC2TL};
+
+constexpr std::array<COP2_SPECIAL1_INSTRUCTIONS, static_cast<int>(60)> Cop2_Special1_Instructions = {
+    COP2_SPECIAL1_INSTRUCTIONS::VADDx,      COP2_SPECIAL1_INSTRUCTIONS::VADDy,
+    COP2_SPECIAL1_INSTRUCTIONS::VADDz,      COP2_SPECIAL1_INSTRUCTIONS::VADDw,
+    COP2_SPECIAL1_INSTRUCTIONS::VSUBx,      COP2_SPECIAL1_INSTRUCTIONS::VSUBy,
+    COP2_SPECIAL1_INSTRUCTIONS::VSUBz,      COP2_SPECIAL1_INSTRUCTIONS::VSUBw,
+    COP2_SPECIAL1_INSTRUCTIONS::VMADDx,     COP2_SPECIAL1_INSTRUCTIONS::VMADDy,
+    COP2_SPECIAL1_INSTRUCTIONS::VMADDz,     COP2_SPECIAL1_INSTRUCTIONS::VMADDw,
+    COP2_SPECIAL1_INSTRUCTIONS::VMSUBx,     COP2_SPECIAL1_INSTRUCTIONS::VMSUBy,
+    COP2_SPECIAL1_INSTRUCTIONS::VMSUBz,     COP2_SPECIAL1_INSTRUCTIONS::VMSUBw,
+    COP2_SPECIAL1_INSTRUCTIONS::VMAXx,      COP2_SPECIAL1_INSTRUCTIONS::VMAXy,
+    COP2_SPECIAL1_INSTRUCTIONS::VMAXz,      COP2_SPECIAL1_INSTRUCTIONS::VMAXw,
+    COP2_SPECIAL1_INSTRUCTIONS::VMINIx,     COP2_SPECIAL1_INSTRUCTIONS::VMINIy,
+    COP2_SPECIAL1_INSTRUCTIONS::VMINIz,     COP2_SPECIAL1_INSTRUCTIONS::VMINIw,
+    COP2_SPECIAL1_INSTRUCTIONS::VMULx,      COP2_SPECIAL1_INSTRUCTIONS::VMULy,
+    COP2_SPECIAL1_INSTRUCTIONS::VMULz,      COP2_SPECIAL1_INSTRUCTIONS::VMULw,
+    COP2_SPECIAL1_INSTRUCTIONS::VMULq,      COP2_SPECIAL1_INSTRUCTIONS::VMAXi,
+    COP2_SPECIAL1_INSTRUCTIONS::VMULi,      COP2_SPECIAL1_INSTRUCTIONS::VMINIi,
+    COP2_SPECIAL1_INSTRUCTIONS::VADDq,      COP2_SPECIAL1_INSTRUCTIONS::VMADDq,
+    COP2_SPECIAL1_INSTRUCTIONS::VADDi,      COP2_SPECIAL1_INSTRUCTIONS::VMADDi,
+    COP2_SPECIAL1_INSTRUCTIONS::VSUBq,      COP2_SPECIAL1_INSTRUCTIONS::VMSUBq,
+    COP2_SPECIAL1_INSTRUCTIONS::VSUBi,      COP2_SPECIAL1_INSTRUCTIONS::VMSUBi,
+    COP2_SPECIAL1_INSTRUCTIONS::VADD,       COP2_SPECIAL1_INSTRUCTIONS::VMADD,
+    COP2_SPECIAL1_INSTRUCTIONS::VMUL,       COP2_SPECIAL1_INSTRUCTIONS::VMAX,
+    COP2_SPECIAL1_INSTRUCTIONS::VSUB,       COP2_SPECIAL1_INSTRUCTIONS::VMSUB,
+    COP2_SPECIAL1_INSTRUCTIONS::VOPMSUB,    COP2_SPECIAL1_INSTRUCTIONS::VMINI,
+    COP2_SPECIAL1_INSTRUCTIONS::VIADD,      COP2_SPECIAL1_INSTRUCTIONS::VISUB,
+    COP2_SPECIAL1_INSTRUCTIONS::VIADDI,     COP2_SPECIAL1_INSTRUCTIONS::VIAND,
+    COP2_SPECIAL1_INSTRUCTIONS::VIOR,       COP2_SPECIAL1_INSTRUCTIONS::VCALLMS,
+    COP2_SPECIAL1_INSTRUCTIONS::CALLMSR,    COP2_SPECIAL1_INSTRUCTIONS::SPECIAL2_1,
+    COP2_SPECIAL1_INSTRUCTIONS::SPECIAL2_2, COP2_SPECIAL1_INSTRUCTIONS::SPECIAL2_3,
+    COP2_SPECIAL1_INSTRUCTIONS::SPECIAL2_4};
+
+constexpr std::array<COP2_SPECIAL2_INSTRUCTIONS, static_cast<int>(41)> Cop2_Special2_Instructions = {
+    COP2_SPECIAL2_INSTRUCTIONS::VADDAx,  COP2_SPECIAL2_INSTRUCTIONS::VADDAy,  COP2_SPECIAL2_INSTRUCTIONS::VADDAz,
+    COP2_SPECIAL2_INSTRUCTIONS::VADDAw,  COP2_SPECIAL2_INSTRUCTIONS::VSUBAx,  COP2_SPECIAL2_INSTRUCTIONS::VSUBAy,
+    COP2_SPECIAL2_INSTRUCTIONS::VSUBAz,  COP2_SPECIAL2_INSTRUCTIONS::VSUBAw,  COP2_SPECIAL2_INSTRUCTIONS::VMADDAx,
+    COP2_SPECIAL2_INSTRUCTIONS::VMADDAy, COP2_SPECIAL2_INSTRUCTIONS::VMADDAz, COP2_SPECIAL2_INSTRUCTIONS::VMADDAw,
+    COP2_SPECIAL2_INSTRUCTIONS::VMSUBAx, COP2_SPECIAL2_INSTRUCTIONS::VMSUBAy, COP2_SPECIAL2_INSTRUCTIONS::VMSUBAz,
+    COP2_SPECIAL2_INSTRUCTIONS::VMSUBAw, COP2_SPECIAL2_INSTRUCTIONS::VITOF0,  COP2_SPECIAL2_INSTRUCTIONS::VITOF4,
+    COP2_SPECIAL2_INSTRUCTIONS::VITOF12, COP2_SPECIAL2_INSTRUCTIONS::VITOF15, COP2_SPECIAL2_INSTRUCTIONS::VFTOI0,
+    COP2_SPECIAL2_INSTRUCTIONS::VFTOI4,  COP2_SPECIAL2_INSTRUCTIONS::VFTOI12, COP2_SPECIAL2_INSTRUCTIONS::VFTOI15,
+    COP2_SPECIAL2_INSTRUCTIONS::VMULAx,  COP2_SPECIAL2_INSTRUCTIONS::VMULAy,  COP2_SPECIAL2_INSTRUCTIONS::VMULAz,
+    COP2_SPECIAL2_INSTRUCTIONS::VMULAw,  COP2_SPECIAL2_INSTRUCTIONS::VMULAq,  COP2_SPECIAL2_INSTRUCTIONS::VABS,
+    COP2_SPECIAL2_INSTRUCTIONS::VMULAi,  COP2_SPECIAL2_INSTRUCTIONS::VCLIPw,  COP2_SPECIAL2_INSTRUCTIONS::VADDAq,
+    COP2_SPECIAL2_INSTRUCTIONS::VMADDAq, COP2_SPECIAL2_INSTRUCTIONS::VADDAi,  COP2_SPECIAL2_INSTRUCTIONS::VMADDAi,
+    COP2_SPECIAL2_INSTRUCTIONS::VSUBAq,  COP2_SPECIAL2_INSTRUCTIONS::VMSUBAq, COP2_SPECIAL2_INSTRUCTIONS::VSUBAi,
+    COP2_SPECIAL2_INSTRUCTIONS::VMSUBAi, COP2_SPECIAL2_INSTRUCTIONS::VADDA};
 
 //? Requires access to enums and maps above it
 
 struct BinaryInstructionUniversal {
-    char instruction_type;
-    uint32_t instruction;  // The baseline instruction that everything should reference
+    OPCODE_GROUP opcode_group = OPCODE_GROUP::STANDARD;
+
+   private:
     BinaryInstructionR register_instruction = {
         static_cast<uint8_t>(instruction >> 26),          // opcode
         static_cast<uint8_t>((instruction << 6) >> 27),   // source register 1
@@ -790,16 +1078,348 @@ struct BinaryInstructionUniversal {
         (instruction << 6) >> 6                   // psuedo address
     };
 
-    OPCODE_GROUP opcode_group = OPCODE_GROUP::STANDARD;
+    //! Write try catch data
+    std::string setOpcodeName_MultimediaExtension() {
+        std::string return_value{""};
+        switch (register_instruction.function_code) {
+            case static_cast<int>(MULTIMEDIA_INSTRUCTIONS::MMI0_GROUP):
+                return_value = multimedia_group_0.at(static_cast<int>(register_instruction.shift_value));
+                break;
 
-   private:
-    std::string opcode_group_name = OPCODE_GROUPS.at(static_cast<int>(opcode_group));
+            case static_cast<int>(MULTIMEDIA_INSTRUCTIONS::MMI1_GROUP):
+                return_value = multimedia_group_1.at(static_cast<int>(register_instruction.shift_value));
+                break;
+
+            case static_cast<int>(MULTIMEDIA_INSTRUCTIONS::MMI2_GROUP):
+                return_value = multimedia_group_2.at(static_cast<int>(register_instruction.shift_value));
+                break;
+
+            case static_cast<int>(MULTIMEDIA_INSTRUCTIONS::MMI3_GROUP):
+                return_value = multimedia_group_3.at(static_cast<int>(register_instruction.shift_value));
+                break;
+
+            default:
+                return_value = multimedia_instructions.at(static_cast<int>(register_instruction.function_code));
+        }
+        return return_value;
+    }
+
+    //! Write try catch data
+    std::string setOpcodeName_SystemControl() {
+        std::string return_value{""};
+        switch (register_instruction.source_register1) {
+            case static_cast<int>(COPROCESSOR_0_INSTRUCTIONS::BRANCH_ON_COPROCESSOR_0):
+                return_value = bc0_instructions.at(static_cast<int>(register_instruction.source_register2));
+                break;
+
+            case static_cast<int>(COPROCESSOR_0_INSTRUCTIONS::TRANSLATION_LOOKASIDE_BUFFER_EXCEPTIONS):
+                return_value = tlb_exception_instructions.at(
+                    static_cast<int>(register_instruction.function_code));  //! Write try catch data
+                break;
+
+            default:
+                return_value = coprocessor_0_instructions.at(static_cast<int>(register_instruction.source_register1));
+        }
+        return return_value;
+    }
+
+    std::string setOpcodeName_FloatingPointUnit() {
+        std::string return_value{""};
+
+        switch (register_instruction.source_register1) {
+            case static_cast<int>(COPROCESSOR_1_INSTRUCTIONS::BRANCH_ON_COPROCESSOR_1):
+                try {
+                    return_value = bc1_instructions.at(static_cast<int>(register_instruction.source_register2));
+                } catch (const std::out_of_range& e) {
+                    std::cout
+                        << "ERROR: Branch on COP1 Instruction isn't in the database.\nReported Statistics:\n";
+                    std::cout << "  Location in File(bytes from the start): " << file_location << "\n";
+                    std::cout << "  Instruction(int): " << instruction << "\n";
+                    std::cout << "  Instruction(hex): " << std::hex << instruction << "\n";
+                    std::cout << "  Instruction(bin): " << std::dec << int_to_binary(instruction) << "\n";
+                    std::cout << "  Source Register: " << static_cast<int>(register_instruction.source_register1)
+                              << "\n";
+                    std::cout << "  Other Source Register(0-31): " << static_cast<int>(register_instruction.source_register2)
+                              << "\n";
+                    std::cout << "  Target Register: " << static_cast<int>(register_instruction.target_register)
+                              << "\n";
+                    std::cout << "  Shift Value: " << static_cast<int>(register_instruction.shift_value) << "\n";
+                    std::cout << "  Function Code: " << static_cast<int>(register_instruction.function_code)
+                              << "\n\n";
+                    std::cout << "The current opcode determinant is \"Other Source Register\".\n";
+                    std::cout << "The current values for the opcode determinant are as follows:\n";
+                    std::cout << "====================================================================\n";
+
+                    for (BC1_INSTRUCTIONS instruct : Bc1_Instructions) {
+                        std::cout << "  Opcode: " << bc1_instructions.at(static_cast<int>(instruct)) << "\n";
+                        std::cout << "  Integer Representation: " << static_cast<int>(instruct) << "\n\n";
+                    }
+                    return_value = "\n";
+                }
+                break;
+
+            case static_cast<int>(COPROCESSOR_1_INSTRUCTIONS::FLOATING_POINT_UNIT_SINGLE_PRECISION):
+                try {
+                    return_value = fpu_s_instructions.at(static_cast<int>(register_instruction.function_code));
+                } catch (const std::out_of_range& e) {
+                    std::cout
+                        << "ERROR: Floating Point Unit Single Precision Instruction isn't in the database.\nReported Statistics:\n";
+                    std::cout << "  Location in File(bytes from the start): " << file_location << "\n";
+                    std::cout << "  Instruction(int): " << instruction << "\n";
+                    std::cout << "  Instruction(hex): " << std::hex << instruction << "\n";
+                    std::cout << "  Instruction(bin): " << std::dec << int_to_binary(instruction) << "\n";
+                    std::cout << "  Source Register: " << static_cast<int>(register_instruction.source_register1)
+                              << "\n";
+                    std::cout << "  Other Source Register: " << static_cast<int>(register_instruction.source_register2)
+                              << "\n";
+                    std::cout << "  Target Register: " << static_cast<int>(register_instruction.target_register)
+                              << "\n";
+                    std::cout << "  Shift Value: " << static_cast<int>(register_instruction.shift_value) << "\n";
+                    std::cout << "  Function Code(0-63): " << static_cast<int>(register_instruction.function_code)
+                              << "\n\n";
+                    std::cout << "The current opcode determinant is \"Function Code\".\n";
+                    std::cout << "The current values for the opcode determinant are as follows:\n";
+                    std::cout << "====================================================================\n";
+
+                    for (FPU_S_INSTRUCTIONS instruct : Fpu_S_Instructions) {
+                        std::cout << "  Opcode: " << fpu_s_instructions.at(static_cast<int>(instruct)) << "\n";
+                        std::cout << "  Integer Representation: " << static_cast<int>(instruct) << "\n\n";
+                    }
+                    return_value = "\n";
+                }
+                break;
+
+            case static_cast<int>(COPROCESSOR_1_INSTRUCTIONS::FLOATING_POINT_UNIT_WORD):
+                try {
+                    return_value = fpu_w_instructions.at(static_cast<int>(register_instruction.function_code));
+                } catch (const std::out_of_range& e) {
+                    std::cout
+                        << "ERROR: Floating Point Unit Word Instruction isn't in the database.\nReported Statistics:\n";
+                    std::cout << "  Location in File(bytes from the start): " << file_location << "\n";
+                    std::cout << "  Instruction(int): " << instruction << "\n";
+                    std::cout << "  Instruction(hex): " << std::hex << instruction << "\n";
+                    std::cout << "  Instruction(bin): " << std::dec << int_to_binary(instruction) << "\n";
+                    std::cout << "  Source Register: " << static_cast<int>(register_instruction.source_register1)
+                              << "\n";
+                    std::cout << "  Other Source Register: " << static_cast<int>(register_instruction.source_register2)
+                              << "\n";
+                    std::cout << "  Target Register: " << static_cast<int>(register_instruction.target_register)
+                              << "\n";
+                    std::cout << "  Shift Value: " << static_cast<int>(register_instruction.shift_value) << "\n";
+                    std::cout << "  Function Code(0-63): " << static_cast<int>(register_instruction.function_code) << "\n\n";
+                    std::cout << "The current opcode determinant is \"Function Code\".\n";
+                    std::cout << "The current values for the opcode determinant are as follows:\n";
+                    std::cout << "====================================================================\n";
+
+                    for (FPU_W_INSTRUCTIONS instruct : Fpu_W_Instructions) {
+                        std::cout << "  Opcode: " << fpu_w_instructions.at(static_cast<int>(instruct)) << "\n";
+                        std::cout << "  Integer Representation: " << static_cast<int>(instruct) << "\n\n";
+                    }
+                    return_value = "\n";
+                }
+                break;
+
+            default:
+                try {
+                    return_value =
+                        coprocessor_1_instructions.at(static_cast<int>(register_instruction.source_register1));
+                } catch (const std::out_of_range& e) {
+                    std::cout
+                        << "ERROR: Floating Point Unit Instruction isn't in the database.\nReported Statistics:\n";
+                    std::cout << "  Location in File(bytes from the start): " << file_location << "\n";
+                    std::cout << "  Instruction(int): " << instruction << "\n";
+                    std::cout << "  Instruction(hex): " << std::hex << instruction << "\n";
+                    std::cout << "  Instruction(bin): " << std::dec << int_to_binary(instruction) << "\n";
+                    std::cout << "  Source Register(0-31): " << static_cast<int>(register_instruction.source_register1)
+                              << "\n";
+                    std::cout << "  Other Source Register: " << static_cast<int>(register_instruction.source_register2)
+                              << "\n";
+                    std::cout << "  Target Register: " << static_cast<int>(register_instruction.target_register)
+                              << "\n";
+                    std::cout << "  Shift Value: " << static_cast<int>(register_instruction.shift_value) << "\n";
+                    std::cout << "  Function Code: " << static_cast<int>(register_instruction.function_code) << "\n\n";
+                    std::cout << "The current opcode determinant is \"Source Register\".\n";
+                    std::cout << "The current values for the opcode determinant are as follows:\n";
+                    std::cout << "====================================================================\n";
+
+                    for (COPROCESSOR_1_INSTRUCTIONS instruct : COP1_Instructions) {
+                        std::cout << "  Opcode: " << coprocessor_1_instructions.at(static_cast<int>(instruct)) << "\n";
+                        std::cout << "  Integer Representation: " << static_cast<int>(instruct) << "\n\n";
+                    }
+                    return_value = "\n";
+                }
+        }
+
+        return return_value;
+    }
+
+    //! Write try catch data
+    std::string setOpcodeName_VPU_Extension1() {
+        std::string return_value{""};
+        switch (register_instruction.function_code) {
+            case static_cast<int>(COP2_SPECIAL1_INSTRUCTIONS::SPECIAL2_4):
+                return_value =
+                    cop2_special2_instructions.at(static_cast<int>((register_instruction.function_code << 6) >> 6) |
+                                                  (4 * static_cast<int>(register_instruction.shift_value)));
+                break;
+
+            case static_cast<int>(COP2_SPECIAL1_INSTRUCTIONS::SPECIAL2_3):
+                return_value =
+                    cop2_special2_instructions.at(static_cast<int>((register_instruction.function_code << 6) >> 6) |
+                                                  (4 * static_cast<int>(register_instruction.shift_value)));
+                break;
+
+            case static_cast<int>(COP2_SPECIAL1_INSTRUCTIONS::SPECIAL2_2):
+                return_value =
+                    cop2_special2_instructions.at(static_cast<int>((register_instruction.function_code << 6) >> 6) |
+                                                  (4 * static_cast<int>(register_instruction.shift_value)));
+                break;
+
+            case static_cast<int>(COP2_SPECIAL1_INSTRUCTIONS::SPECIAL2_1):
+                return_value =
+                    cop2_special2_instructions.at(static_cast<int>((register_instruction.function_code << 6) >> 6) |
+                                                  (4 * static_cast<int>(register_instruction.shift_value)));
+                break;
+
+            default:
+                return_value = cop2_special1_instructions.at(static_cast<int>(register_instruction.function_code));
+        }
+        return return_value;
+    }
+
+    //! Write try catch data
+    std::string setOpcodeName_VectorProcessingUnit() {
+        std::string return_value{""};
+        switch (register_instruction.source_register1) {
+            case static_cast<int>(COPROCESSOR_2_INSTRUCTIONS::BRANCH_ON_COPROCESSOR_2):
+                return_value = bc2_instructions.at(static_cast<int>(register_instruction.source_register2));
+                break;
+
+            case static_cast<int>(COPROCESSOR_2_INSTRUCTIONS::SPECIAL1_1):
+                return_value = setOpcodeName_VPU_Extension1();
+                break;
+
+            case static_cast<int>(COPROCESSOR_2_INSTRUCTIONS::SPECIAL1_2):
+                return_value = setOpcodeName_VPU_Extension1();
+                break;
+
+            case static_cast<int>(COPROCESSOR_2_INSTRUCTIONS::SPECIAL1_3):
+                return_value = setOpcodeName_VPU_Extension1();
+                break;
+
+            case static_cast<int>(COPROCESSOR_2_INSTRUCTIONS::SPECIAL1_4):
+                return_value = setOpcodeName_VPU_Extension1();
+                break;
+
+            case static_cast<int>(COPROCESSOR_2_INSTRUCTIONS::SPECIAL1_5):
+                return_value = setOpcodeName_VPU_Extension1();
+                break;
+
+            case static_cast<int>(COPROCESSOR_2_INSTRUCTIONS::SPECIAL1_6):
+                return_value = setOpcodeName_VPU_Extension1();
+                break;
+
+            case static_cast<int>(COPROCESSOR_2_INSTRUCTIONS::SPECIAL1_7):
+                return_value = setOpcodeName_VPU_Extension1();
+                break;
+
+            case static_cast<int>(COPROCESSOR_2_INSTRUCTIONS::SPECIAL1_8):
+                return_value = setOpcodeName_VPU_Extension1();
+                break;
+
+            case static_cast<int>(COPROCESSOR_2_INSTRUCTIONS::SPECIAL1_9):
+                return_value = setOpcodeName_VPU_Extension1();
+                break;
+
+            case static_cast<int>(COPROCESSOR_2_INSTRUCTIONS::SPECIAL1_10):
+                return_value = setOpcodeName_VPU_Extension1();
+                break;
+
+            case static_cast<int>(COPROCESSOR_2_INSTRUCTIONS::SPECIAL1_11):
+                return_value = setOpcodeName_VPU_Extension1();
+                break;
+
+            case static_cast<int>(COPROCESSOR_2_INSTRUCTIONS::SPECIAL1_12):
+                return_value = setOpcodeName_VPU_Extension1();
+                break;
+
+            case static_cast<int>(COPROCESSOR_2_INSTRUCTIONS::SPECIAL1_13):
+                return_value = setOpcodeName_VPU_Extension1();
+                break;
+
+            case static_cast<int>(COPROCESSOR_2_INSTRUCTIONS::SPECIAL1_14):
+                return_value = setOpcodeName_VPU_Extension1();
+                break;
+
+            case static_cast<int>(COPROCESSOR_2_INSTRUCTIONS::SPECIAL1_15):
+                return_value = setOpcodeName_VPU_Extension1();
+                break;
+
+            case static_cast<int>(COPROCESSOR_2_INSTRUCTIONS::SPECIAL1_16):
+                return_value = setOpcodeName_VPU_Extension1();
+                break;
+
+            default:
+                return_value = coprocessor_2_instructions.at(static_cast<int>(register_instruction.source_register1));
+        };
+        return return_value;
+    }
+
+    std::string opcode_group_name = opcode_groups.at(static_cast<int>(opcode_group));
+    std::string opcode_name = setOpcodeName();
 
    public:
-    void setOpcodeGroupName() { opcode_group_name = OPCODE_GROUPS.at(static_cast<int>(opcode_group)); }
-    std::string getOpcodeGroupName() { return opcode_group_name;}
+    char instruction_type;
+    uint32_t instruction;  // The baseline instruction that everything should reference
+    int file_location;
 
-    BinaryInstructionUniversal(char c, uint32_t i) : instruction_type(c), instruction(i) {}
+    uint8_t getOpcode() { return register_instruction.opcode; }
+    uint8_t getSourceRegister1() { return register_instruction.source_register1; }
+    uint8_t getSourceRegister2() { return register_instruction.source_register2; }
+    uint8_t getSourceRegister() { return immediate_instruction.source_register; }
+    uint8_t getITypeTargetRegister() { return immediate_instruction.target_register; }
+    uint8_t getRTypeTargetRegister() { return register_instruction.target_register; }
+    uint8_t getDestinationRegister() { return register_instruction.target_register; }
+    uint8_t getShiftValue() { return register_instruction.shift_value; }
+    uint8_t getFunctionCode() { return register_instruction.function_code; }
+
+    uint16_t getImmediateValue() { return immediate_instruction.immediate_value; }
+
+    uint32_t getPsuedoAddress() { return jump_instruction.pseudo_address; }
+
+    std::string getOpcodeGroupName() { return opcode_group_name; }
+    std::string getOpcodeName() { return opcode_name; }
+
+    void setOpcodeGroupName() { opcode_group_name = opcode_groups.at(static_cast<int>(opcode_group)); }
+
+    //! Write a setOpcodeGroup function here
+
+    std::string setOpcodeName() {
+        switch (register_instruction.opcode) {
+            case static_cast<int>(STANDARD_INSTRUCTIONS::REGISTER):
+                return register_instructions.at(static_cast<int>(register_instruction.function_code));
+
+            case static_cast<int>(STANDARD_INSTRUCTIONS::REGISTER_IMMEDIATE):
+                return regimm_instructions.at(static_cast<int>(register_instruction.source_register2));
+
+            case static_cast<int>(STANDARD_INSTRUCTIONS::SYSTEM_CONTROL_COPROCESSOR):
+                return setOpcodeName_SystemControl();
+
+            case static_cast<int>(STANDARD_INSTRUCTIONS::FLOATING_POINT_UNIT_COPROCESSOR):
+                return setOpcodeName_FloatingPointUnit();
+
+            case static_cast<int>(STANDARD_INSTRUCTIONS::VECTOR_POINT_UNIT_COPROCESSOR):
+                return setOpcodeName_VectorProcessingUnit();
+
+            case static_cast<int>(STANDARD_INSTRUCTIONS::MULTIMEDIA_EXTENSIONS):
+                return setOpcodeName_MultimediaExtension();
+
+            default:
+                return standard_instructions.at(static_cast<int>(register_instruction.opcode));
+        };
+    }
+
+    BinaryInstructionUniversal(char c, uint32_t i, int f) : instruction_type(c), instruction(i), file_location(f) {}
 };
 
 //? ELF FILE STRUCTURES
@@ -854,17 +1474,6 @@ uint16_t swap16(uint16_t value) { return (value >> 8) | (value << 8); }
 uint32_t swap32(uint32_t value) {
     return (value >> 24) | ((value >> 8) & 0x0000FF00) | ((value << 8) & 0x00FF0000) | (value << 24);
 }
-
-std::string int_to_hex(int num);
-// unsigned int hex_to_int(HexByte hex_value);
-std::string int_to_binary(int num);
-bool valid_arg(char* argument, std::string& arg, std::string& value);
-std::vector<int> bin_to_hex();
-int hex_to_asm(int argc, char* argv[]);
-// uint32_t parseBinary(std::vector<char>& buffer);
-// void assemble_r_instruction(uint32_t instruction);
-// void assemble_i_instruction(uint32_t instruction);
-// void assemble_j_instruction(uint32_t instruction);
 
 class ELFParser {
    public:
@@ -1026,7 +1635,7 @@ class ELFParser {
         }
     }
 
-    uint32_t parseBinary(char* buffer) {
+    uint32_t parseBinary(uint8_t* buffer) {
         uint32_t instruction = 0;                  // Holds enough for 1 MIPS instruction
         instruction += uint32_t(buffer[3]) << 24;  // Move the first byte into position
         instruction += uint32_t(buffer[2]) << 16;  // Second byte
@@ -1035,23 +1644,11 @@ class ELFParser {
         // std::cout << instruction << "\n";
 
         return instruction;
-
-        // // Check opcode == 0 | true: R-type instruction | false: I or J instruction
-        // if (instruction >> 26 == 0) {
-        //     // Assemble R-type instruction
-        //     assemble_r_instruction(instruction);
-        // } else if (instruction >> 26 == 2 || instruction >> 26 == 3) {  // There are only 2 J-type instructions
-        //     // Assemble J-type instruction
-        //     assemble_j_instruction(instruction);
-        // } else {
-        //     // Assemble I-type instruction
-        //     assemble_i_instruction(instruction);
-        // }
     }
 
     void parseProgram(Elf32_Phdr& program_header) {
         file.seekg(program_header.offset, std::ios::beg);  // Go to the offset of the actual program
-        char char_array[4];                                // to read in 4 byte chunks
+        uint8_t char_array[4];                                // to read in 4 byte chunks
 
         // std::cout << program_header.file_size + program_header.offset << " " << file.tellg() << "\n";
         while (program_header.file_size + program_header.offset >= file.tellg()) {
@@ -1065,21 +1662,28 @@ class ELFParser {
             // Now we have the whole instruction
             uint32_t raw_instruction = parseBinary(char_array);  // Store as a general instruction
 
+            if (static_cast<int>(raw_instruction) == 1204019200 || static_cast<int>(raw_instruction) == 864289280) {
+                std::cout << "What the fuck bro\n";
+            }
+
             if (!isLittleEndian) {
                 raw_instruction = swap32(raw_instruction);
             }
 
-            BinaryInstructionUniversal formatted_instruction = opcodeChecker(raw_instruction);
+            std::cout << "Raw instruction: " << raw_instruction << "\n";
+            BinaryInstructionUniversal formatted_instruction = opcodeChecker(raw_instruction, static_cast<int>(file.tellg()));
+
+            std::cout << formatted_instruction.getOpcodeName() << "\n";
         }
     }
 
     // Identifies the Opcode to run for a given instruction, creating and returning a universal formatted binary
     // instruction
-    BinaryInstructionUniversal opcodeChecker(uint32_t instruction) {
+    BinaryInstructionUniversal opcodeChecker(uint32_t instruction, int file_location) {
         // Time to figure out what the instruction is supposed to do
         // std::cout << std::hex << instruction << "\n";
         int opcode = instruction >> 26;  // in binary
-        BinaryInstructionUniversal universal_instruction = {'I', instruction};
+        BinaryInstructionUniversal universal_instruction = {'I', instruction, file_location};
 
         //? Use Enum Class and Switch Statement for opcode lookup
         switch (opcode) {
@@ -1406,6 +2010,166 @@ std::string int_to_binary(int num) {
     // std::cout << num1 << ' ' << num2 << ' ' << num3 << ' ' << num4 << ' ' << num5;
     // std::cout << ' ' << num6 << ' ' << num7 << ' ' << num8 << '\n';
 
+    result.push_back(num8 + '0');
+    result.push_back(num7 + '0');
+    result.push_back(num6 + '0');
+    result.push_back(num5 + '0');
+    result.push_back(num4 + '0');
+    result.push_back(num3 + '0');
+    result.push_back(num2 + '0');
+    result.push_back(num1 + '0');
+
+    return result;
+}
+
+/**
+ * @brief Translates an integer value into its corresponding binary value
+ *
+ * @param num The integer to translate into binary format (0-1).
+ * @return std::string A string containing eight binary characters, which match an integer 0-255.
+ */
+std::string int_to_binary(uint8_t num) {
+    std::string result = "";
+    int num1 = num % 2;
+    int num2 = (num / 2) % 2;
+    int num3 = (num / 4) % 2;
+    int num4 = (num / 8) % 2;
+    int num5 = (num / 16) % 2;
+    int num6 = (num / 32) % 2;
+    int num7 = (num / 64) % 2;
+    int num8 = (num / 128) % 2;
+
+    // std::cout << num1 << ' ' << num2 << ' ' << num3 << ' ' << num4 << ' ' << num5;
+    // std::cout << ' ' << num6 << ' ' << num7 << ' ' << num8 << '\n';
+
+    result.push_back(num8 + '0');
+    result.push_back(num7 + '0');
+    result.push_back(num6 + '0');
+    result.push_back(num5 + '0');
+    result.push_back(num4 + '0');
+    result.push_back(num3 + '0');
+    result.push_back(num2 + '0');
+    result.push_back(num1 + '0');
+
+    return result;
+}
+
+/**
+ * @brief Translates an integer value into its corresponding binary value
+ *
+ * @param num The integer to translate into binary format (0-1).
+ * @return std::string A string containing 16 binary characters, which match an integer 0-65,535.
+ */
+std::string int_to_binary(uint16_t num) {
+    std::string result = "";
+    int num1 = num % 2;
+    int num2 = (num / 2) % 2;
+    int num3 = (num / 4) % 2;
+    int num4 = (num / 8) % 2;
+    int num5 = (num / 16) % 2;
+    int num6 = (num / 32) % 2;
+    int num7 = (num / 64) % 2;
+    int num8 = (num / 128) % 2;
+    int num9 = (num / 256) % 2;
+    int num10 = (num / 512) % 2;
+    int num11 = (num / 1024) % 2;
+    int num12 = (num / 2048) % 2;
+    int num13 = (num / 4096) % 2;
+    int num14 = (num / 8192) % 2;
+    int num15 = (num / 16384) % 2;
+    int num16 = (num / 32768) % 2;
+
+    // std::cout << num1 << ' ' << num2 << ' ' << num3 << ' ' << num4 << ' ' << num5;
+    // std::cout << ' ' << num6 << ' ' << num7 << ' ' << num8 << '\n';
+
+    result.push_back(num16 + '0');
+    result.push_back(num15 + '0');
+    result.push_back(num14 + '0');
+    result.push_back(num13 + '0');
+    result.push_back(num12 + '0');
+    result.push_back(num11 + '0');
+    result.push_back(num10 + '0');
+    result.push_back(num9 + '0');
+    result.push_back(num8 + '0');
+    result.push_back(num7 + '0');
+    result.push_back(num6 + '0');
+    result.push_back(num5 + '0');
+    result.push_back(num4 + '0');
+    result.push_back(num3 + '0');
+    result.push_back(num2 + '0');
+    result.push_back(num1 + '0');
+
+    return result;
+}
+
+/**
+ * @brief Translates an integer value into its corresponding binary value
+ *
+ * @param num The integer to translate into binary format (0-1).
+ * @return std::string A string containing 32 binary characters, which match an integer 0-4,294,967,295.
+ */
+std::string int_to_binary(uint32_t num) {
+    std::string result = "";
+    int num1 = num % 2;
+    int num2 = (num / 2) % 2;
+    int num3 = (num / 4) % 2;
+    int num4 = (num / 8) % 2;
+    int num5 = (num / 16) % 2;
+    int num6 = (num / 32) % 2;
+    int num7 = (num / 64) % 2;
+    int num8 = (num / 128) % 2;
+    int num9 = (num / 256) % 2;
+    int num10 = (num / 512) % 2;
+    int num11 = (num / 1024) % 2;
+    int num12 = (num / 2048) % 2;
+    int num13 = (num / 4096) % 2;
+    int num14 = (num / 8192) % 2;
+    int num15 = (num / 16384) % 2;
+    int num16 = (num / 32768) % 2;
+    int num17 = (num / 65536) % 2;
+    int num18 = (num / 131072) % 2;
+    int num19 = (num / 262144) % 2;
+    int num20 = (num / 524288) % 2;
+    int num21 = (num / 1048576) % 2;
+    int num22 = (num / 2097152) % 2;
+    int num23 = (num / 4194304) % 2;
+    int num24 = (num / 8388608) % 2;
+    int num25 = (num / 16777216) % 2;
+    int num26 = (num / 33554432) % 2;
+    int num27 = (num / 67108864) % 2;
+    int num28 = (num / 134217728) % 2;
+    int num29 = (num / 268435456) % 2;
+    int num30 = (num / 536870912) % 2;
+    int num31 = (num / 1073741824) % 2;
+    int num32 = (num / 2147483648) % 2;
+
+    // std::cout << num1 << ' ' << num2 << ' ' << num3 << ' ' << num4 << ' ' << num5;
+    // std::cout << ' ' << num6 << ' ' << num7 << ' ' << num8 << '\n';
+
+    result.push_back(num32 + '0');
+    result.push_back(num31 + '0');
+    result.push_back(num30 + '0');
+    result.push_back(num29 + '0');
+    result.push_back(num28 + '0');
+    result.push_back(num27 + '0');
+    result.push_back(num26 + '0');
+    result.push_back(num25 + '0');
+    result.push_back(num24 + '0');
+    result.push_back(num23 + '0');
+    result.push_back(num22 + '0');
+    result.push_back(num21 + '0');
+    result.push_back(num20 + '0');
+    result.push_back(num19 + '0');
+    result.push_back(num18 + '0');
+    result.push_back(num17 + '0');
+    result.push_back(num16 + '0');
+    result.push_back(num15 + '0');
+    result.push_back(num14 + '0');
+    result.push_back(num13 + '0');
+    result.push_back(num12 + '0');
+    result.push_back(num11 + '0');
+    result.push_back(num10 + '0');
+    result.push_back(num9 + '0');
     result.push_back(num8 + '0');
     result.push_back(num7 + '0');
     result.push_back(num6 + '0');
