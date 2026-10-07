@@ -19,6 +19,10 @@ std::vector<int> bin_to_hex();
 int hex_to_asm(int argc, char* argv[]);
 // uint32_t parseBinary(std::vector<char>& buffer);
 
+// List of possible command line arguments
+const std::string possible_args[6] = {"--input-file", "--output-file", 
+        "--bytes-per-row", "--binary-output", "--format-output", "--format-input"};
+
 // All binary instructions for MIPS assembly code are 32 bits long.
 struct BinaryInstructionR {
     uint8_t opcode = 0;        // 6 bits
@@ -1056,6 +1060,10 @@ constexpr std::array<COP2_SPECIAL2_INSTRUCTIONS, static_cast<int>(41)> Cop2_Spec
 struct BinaryInstructionUniversal {
     OPCODE_GROUP opcode_group = OPCODE_GROUP::STANDARD;
 
+    char instruction_type;
+    uint32_t instruction;  // The baseline instruction that everything should reference
+    int file_location;
+   
    private:
     BinaryInstructionR register_instruction = {
         static_cast<uint8_t>(instruction >> 26),          // opcode
@@ -1369,9 +1377,7 @@ struct BinaryInstructionUniversal {
     std::string opcode_name = setOpcodeName();
 
    public:
-    char instruction_type;
-    uint32_t instruction;  // The baseline instruction that everything should reference
-    int file_location;
+
 
     uint8_t getOpcode() { return register_instruction.opcode; }
     uint8_t getSourceRegister1() { return register_instruction.source_register1; }
@@ -1662,15 +1668,11 @@ class ELFParser {
             // Now we have the whole instruction
             uint32_t raw_instruction = parseBinary(char_array);  // Store as a general instruction
 
-            if (static_cast<int>(raw_instruction) == 1204019200 || static_cast<int>(raw_instruction) == 864289280) {
-                std::cout << "What the fuck bro\n";
-            }
-
             if (!isLittleEndian) {
                 raw_instruction = swap32(raw_instruction);
             }
 
-            std::cout << "Raw instruction: " << raw_instruction << "\n";
+            // std::cout << "Raw instruction: " << raw_instruction << "\n";
             BinaryInstructionUniversal formatted_instruction = opcodeChecker(raw_instruction, static_cast<int>(file.tellg()));
 
             std::cout << formatted_instruction.getOpcodeName() << "\n";
@@ -1720,11 +1722,39 @@ class ELFParser {
  * properties of changable variables the user may  want control over (e.g., input-file, output-file, etc.)
  * @return int The return code given from running the program (e.g., 0 for clear, 1 for error).
  */
-int main() {
+int main(int argc, char* argv[]) {
+    std::string input_file = "";  // No Default input file
+
+    if (argc > 1) {
+        std::string arg_key;
+        std::string command_value;
+
+        for (int i = 1; i < argc; i++) {
+            if (valid_arg(argv[i], arg_key, command_value)) {
+                if (arg_key == "--input-file") {
+                    input_file = command_value;
+                }
+            }
+        }
+    }
+
+    // std::cout << "Input file: " << input_file << "\n";
+    // std::cout << argc << " arguments provided.\n";
+    // std::cout << "Arguments:\n";
+    // for (int i = 0; i < argc; i++) {
+    //     std::cout << "  " << argv[i] << "\n";
+    // }
+
+    if (input_file == "") {
+        std::cerr << "No input file provided. Please use the --input-file argument to specify a file.\n";
+        return 1;
+    }
+
+
     ELFParser parser;
 
     // Attempts to load the binary of the ps2 "executable"
-    if (!parser.load("SLUS_205.91")) {
+    if (!parser.load(input_file)) {
         return 1;
     }
 
@@ -2194,26 +2224,24 @@ std::string int_to_binary(uint32_t num) {
  * @return false The given argument was NOT valid, DO NOT change propertie(s) for bin-to-hex.
  */
 bool valid_arg(char* argument, std::string& arg, std::string& value) {
-    int i = 2;
+    int i = 0;
     do {
         arg.push_back(argument[i]);
         i++;
     } while (argument[i] != '=' && argument[i] != '\0');
 
-    std::vector<std::string> possible_args{"input-file",    "output-file",   "bytes-per-row",
-                                           "binary-output", "format-output", "format-input"};
-
     // Tries to find the current argument in the list of possible_args
-    if (std::find(possible_args.begin(), possible_args.end(), arg) != possible_args.end()) {
-        i++;
-        do {
-            value.push_back(argument[i]);
-            i++;
-        } while (argument[i] != '\0');
-        return 1;
+    for (int j = 0; j < 6; j++) {
+        if (arg == possible_args[j]) {
+            while (argument[i] != '\0') {  
+                i++;
+                value.push_back(argument[i]);
+            }
+        return true;
+        }
     }
 
-    return 0;
+    return false;
 }
 
 /**
