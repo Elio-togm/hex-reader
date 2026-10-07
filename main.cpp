@@ -1668,11 +1668,16 @@ class ELFParser {
             // Now we have the whole instruction
             uint32_t raw_instruction = parseBinary(char_array);  // Store as a general instruction
 
+            if (static_cast<int>(raw_instruction) == 1108279850) {
+                std::cout << "Found the instruction at file location: " << file.tellg() << "\n";
+                std::cout << "Hex location of instruction: " << std::hex << file.tellg() << std::dec << "\n";
+            }
+
             if (!isLittleEndian) {
                 raw_instruction = swap32(raw_instruction);
             }
 
-            // std::cout << "Raw instruction: " << raw_instruction << "\n";
+            std::cout << "Raw instruction: " << raw_instruction << "\n";
             BinaryInstructionUniversal formatted_instruction = opcodeChecker(raw_instruction, static_cast<int>(file.tellg()));
 
             std::cout << formatted_instruction.getOpcodeName() << "\n";
