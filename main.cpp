@@ -8,6 +8,8 @@
 #include <string>
 #include <vector>
 
+// TODO Export Enum Classes, Maps, and Constexpr Arrays to Other file(s)
+
 std::string int_to_hex(int num);
 // unsigned int hex_to_int(HexByte hex_value);
 std::string int_to_binary(int num);
@@ -19,9 +21,10 @@ std::vector<int> bin_to_hex();
 int hex_to_asm(int argc, char* argv[]);
 // uint32_t parseBinary(std::vector<char>& buffer);
 
-// List of possible command line arguments
-const std::string possible_args[6] = {"--input-file", "--output-file", 
-        "--bytes-per-row", "--binary-output", "--format-output", "--format-input"};
+// TODO Add support for other CLI args or remove unsupported ones
+//  List of possible command line arguments (only "--input-file" atm)
+const std::string possible_args[6] = {"--input-file",    "--output-file",   "--bytes-per-row",
+                                      "--binary-output", "--format-output", "--format-input"};
 
 // All binary instructions for MIPS assembly code are 32 bits long.
 struct BinaryInstructionR {
@@ -63,7 +66,7 @@ struct BinaryInstructionJ {
 
 //? THE FOLLOWING SECTION IS INTEGER - OPCODE KEY - VALUE PAIRS
 
-// The Standard Opcodes and their integer representations
+// The Standard Opcodes and their integer representations (Opcode)
 const std::map<int, std::string> standard_instructions{
     {0, "Register"},
     {1, "Register Immediate"},
@@ -84,6 +87,7 @@ const std::map<int, std::string> standard_instructions{
     {16, "System Control Coprocessor"},
     {17, "Floating Point Single Precision Coprocessor"},
     {18, "Vector Point Unit Coprocessor"},
+    {19, "?????"},
     {20, "BEQL"},
     {21, "BNEL"},
     {22, "BLEZL"},
@@ -93,6 +97,7 @@ const std::map<int, std::string> standard_instructions{
     {26, "LDL"},
     {27, "LDR"},
     {28, "Multimedia Extensions"},
+    {29, "?????"},
     {30, "LQ"},
     {31, "SQ"},
     {32, "LB"},
@@ -111,166 +116,957 @@ const std::map<int, std::string> standard_instructions{
     {45, "SDR"},
     {46, "SWR"},
     {47, "CACHE"},
+    {48, "?????"},
     {49, "LWC1"},
+    {50, "?????"},
     {51, "PREF"},
+    {52, "?????"},
+    {53, "?????"},
     {54, "LQC2"},
     {55, "LD"},
+    {56, "?????"},
     {57, "SWC1"},
+    {58, "?????"},
+    {59, "?????"},
+    {60, "?????"},
+    {61, "?????"},
     {62, "SQC2"},
-    {63, "SD"},
+    {63, "SD"}
 };
 
-// The Register-Type Opcodes
+// The Register-Type Opcodes (Function)
 const std::map<int, std::string> register_instructions{
-    {0, "SLL"},     {2, "SRL"},     {3, "SRA"},     {4, "SLLV"},     {6, "SRLV"},   {7, "SRAV"},   {8, "JR"},
-    {9, "JALR"},    {10, "MOVZ"},   {11, "MOVN"},   {12, "SYSCALL"}, {13, "BREAK"}, {15, "SNYC"},  {16, "MFHI"},
-    {17, "MTHI"},   {18, "MFLO"},   {19, "MTLO"},   {20, "DSLLV"},   {22, "DSRLV"}, {23, "DSRAV"}, {24, "MULT"},
-    {25, "MULTU"},  {26, "DIV"},    {27, "DIVU"},   {32, "ADD"},     {33, "ADDU"},  {34, "SUB"},   {35, "SUBU"},
-    {36, "AND"},    {37, "OR"},     {38, "XOR"},    {39, "NOR"},     {40, "MFSA"},  {41, "MTSA"},  {42, "SLT"},
-    {43, "SLTU"},   {44, "DADD"},   {45, "DADDU"},  {46, "DSUB"},    {47, "DSUBU"}, {48, "TGE"},   {49, "TGEU"},
-    {50, "TLT"},    {51, "TLTU"},   {52, "TEQ"},    {54, "TNE"},     {56, "DSLL"},  {58, "DSRL"},  {59, "DSRA"},
-    {60, "DSLL32"}, {62, "DSRL32"}, {63, "DSRA32"},
+    {0, "SLL"}, 
+    {1, "?????"},    
+    {2, "SRL"},     
+    {3, "SRA"},     
+    {4, "SLLV"},     
+    {5, "?????"},
+    {6, "SRLV"},   
+    {7, "SRAV"},   
+    {8, "JR"},
+    {9, "JALR"},    
+    {10, "MOVZ"},   
+    {11, "MOVN"},   
+    {12, "SYSCALL"}, 
+    {13, "BREAK"},
+    {14, "?????"},
+    {15, "SNYC"},  
+    {16, "MFHI"},
+    {17, "MTHI"},   
+    {18, "MFLO"},   
+    {19, "MTLO"},   
+    {20, "DSLLV"},  
+    {21, "?????"},
+    {22, "DSRLV"}, 
+    {23, "DSRAV"}, 
+    {24, "MULT"},
+    {25, "MULTU"},  
+    {26, "DIV"},    
+    {27, "DIVU"},   
+    {28, "?????"},
+    {29, "?????"},
+    {30, "?????"},
+    {31, "?????"},
+    {32, "ADD"},     
+    {33, "ADDU"},  
+    {34, "SUB"},   
+    {35, "SUBU"},
+    {36, "AND"},    
+    {37, "OR"},     
+    {38, "XOR"},    
+    {39, "NOR"},     
+    {40, "MFSA"}, 
+    {41, "MTSA"},  
+    {42, "SLT"},
+    {43, "SLTU"},   
+    {44, "DADD"},   
+    {45, "DADDU"},  
+    {46, "DSUB"},   
+    {47, "DSUBU"}, 
+    {48, "TGE"},   
+    {49, "TGEU"},
+    {50, "TLT"},    
+    {51, "TLTU"},   
+    {52, "TEQ"},    
+    {53, "?????"},
+    {54, "TNE"},     
+    {55, "?????"},
+    {56, "DSLL"},  
+    {57, "?????"},
+    {58, "DSRL"},  
+    {59, "DSRA"},
+    {60, "DSLL32"}, 
+    {61, "?????"},
+    {62, "DSRL32"}, 
+    {63, "DSRA32"}
 };
 
-// The Register Immediate Opcodes
+// The Register Immediate Opcodes (Source2/Target)
 const std::map<int, std::string> regimm_instructions{
-    {0, "BLTZ"},     {1, "BGEZ"},     {2, "BLTZL"},  {3, "BGEZL"},  {8, "TGEI"},    {9, "TEGIU"},
-    {10, "TLTI"},    {11, "TLTIU"},   {12, "TEQI"},  {14, "TNEI"},  {16, "BLTZAL"}, {17, "BGEZAL"},
-    {18, "BLTZALL"}, {19, "BGEZALL"}, {24, "MTSAB"}, {25, "MTSAH"},
+    {0, "BLTZ"},     
+    {1, "BGEZ"},     
+    {2, "BLTZL"},  
+    {3, "BGEZL"},  
+    {4, "?????"},
+    {5, "?????"},
+    {6, "?????"},
+    {7, "?????"},
+    {8, "TGEI"},    
+    {9, "TEGIU"},
+    {10, "TLTI"},    
+    {11, "TLTIU"},   
+    {12, "TEQI"},  
+    {13, "?????"},
+    {14, "TNEI"}, 
+    {15, "?????"},
+    {16, "BLTZAL"}, 
+    {17, "BGEZAL"},
+    {18, "BLTZALL"}, 
+    {19, "BGEZALL"}, 
+    {20, "?????"},
+    {21, "?????"},
+    {22, "?????"},
+    {23, "?????"},
+    {24, "MTSAB"}, 
+    {25, "MTSAH"},
+    {26, "?????"},
+    {27, "?????"},
+    {28, "?????"},
+    {29, "?????"},
+    {30, "?????"},
+    {31, "?????"}
 };
 
-// The Multimedia Extension Opcodes
+// The Multimedia Extension Opcodes (Function)
 const std::map<int, std::string> multimedia_instructions{
-    {0, "MADD"},   {1, "MADDU"},  {4, "PLZCW"},   {8, "MMI0 Group"},  {9, "MMI2 Group"},  {16, "MFHI1"},
-    {17, "MTHI1"}, {18, "MFLO1"}, {19, "MTLO1"},  {24, "MULT1"},      {25, "MULTU1"},     {26, "DIV1"},
-    {27, "DIVU1"}, {32, "MADD1"}, {33, "MADDU1"}, {40, "MMI1 Group"}, {41, "MMI3 Group"}, {44, "PSLLH"},
-    {46, "PSRLH"}, {47, "PSRAH"}, {60, "PSLLW"},  {62, "PSRLW"},      {63, "PSRAW"},
+    {0, "MADD"},   
+    {1, "MADDU"},  
+    {2, "MMI ??"},
+    {3, "MMI ??"},
+    {4, "PLZCW"},   
+    {5, "MMI ??"},
+    {6, "MMI ??"},
+    {7, "MMI ??"},
+    {8, "MMI0 Group"},  
+    {9, "MMI2 Group"}, 
+    {10, "MMI ??"},
+    {11, "MMI ??"},
+    {12, "MMI ??"},
+    {13, "MMI ??"},
+    {14, "MMI ??"},
+    {15, "MMI ??"},
+    {16, "MFHI1"},
+    {17, "MTHI1"}, 
+    {18, "MFLO1"}, 
+    {19, "MTLO1"},  
+    {20, "MMI ??"},
+    {21, "MMI ??"},
+    {22, "MMI ??"},
+    {23, "MMI ??"},
+    {24, "MULT1"},      
+    {25, "MULTU1"},    
+    {26, "DIV1"},
+    {27, "DIVU1"}, 
+    {28, "MMI ??"},
+    {29, "MMI ??"},
+    {30, "MMI ??"},
+    {31, "MMI ??"},
+    {32, "MADD1"}, 
+    {33, "MADDU1"}, 
+    {34, "MMI ??"},
+    {35, "MMI ??"},
+    {36, "MMI ??"},
+    {37, "MMI ??"},
+    {38, "MMI ??"},
+    {39, "MMI ??"},
+    {40, "MMI1 Group"}, 
+    {41, "MMI3 Group"}, 
+    {42, "MMI ??"},
+    {43, "MMI ??"},
+    {44, "PSLLH"},
+    {45, "MMI ??"},
+    {46, "PSRLH"}, 
+    {47, "PSRAH"}, 
+    {48, "MMI ??"},
+    {49, "MMI ??"},
+    {50, "MMI ??"},
+    {51, "MMI ??"},
+    {52, "MMI ??"},
+    {53, "MMI ??"},
+    {54, "MMI ??"},
+    {55, "MMI ??"},
+    {56, "MMI ??"},
+    {57, "MMI ??"},
+    {58, "MMI ??"},
+    {59, "MMI ??"},
+    {60, "PSLLW"},  
+    {61, "MMI ??"},
+    {62, "PSRLW"},     
+    {63, "PSRAW"}
 };
 
-// The Multimedia Group 0 Opcodes
+// The Multimedia Group 0 Opcodes (Shift/Shamft)
 const std::map<int, std::string> multimedia_group_0{
-    {0, "PADDW"},   {1, "PSUBW"},   {2, "PCGTW"},   {3, "PMAXW"},   {4, "PADDH"},   {5, "PSUBH"},   {6, "PCGTH"},
-    {7, "PMAXH"},   {8, "PADDB"},   {9, "PSUBB"},   {10, "PCGTB"},  {16, "PADDSW"}, {17, "PSUBSW"}, {18, "PEXTLW"},
-    {19, "PPACW"},  {20, "PADDSH"}, {21, "PSUBSH"}, {22, "PEXTLH"}, {23, "PPACH"},  {24, "PADDSB"}, {25, "PSUBSB"},
-    {26, "PEXTLB"}, {27, "PPACB"},  {30, "PEXT5"},  {31, "PPAC5"},
+    {0, "PADDW"},   
+    {1, "PSUBW"},   
+    {2, "PCGTW"},   
+    {3, "PMAXW"},   
+    {4, "PADDH"},   
+    {5, "PSUBH"},   
+    {6, "PCGTH"},
+    {7, "PMAXH"},   
+    {8, "PADDB"},   
+    {9, "PSUBB"},   
+    {10, "PCGTB"}, 
+    {11, "MMI ??"}, 
+    {12, "MMI ??"},
+    {13, "MMI ??"},
+    {14, "MMI ??"},
+    {15, "MMI ??"},
+    {16, "PADDSW"}, 
+    {17, "PSUBSW"}, 
+    {18, "PEXTLW"},
+    {19, "PPACW"},  
+    {20, "PADDSH"}, 
+    {21, "PSUBSH"}, 
+    {22, "PEXTLH"}, 
+    {23, "PPACH"},  
+    {24, "PADDSB"}, 
+    {25, "PSUBSB"},
+    {26, "PEXTLB"}, 
+    {27, "PPACB"},  
+    {28, "MMI ??"},
+    {29, "MMI ??"},
+    {30, "PEXT5"},  
+    {31, "PPAC5"}
 };
 
-// The Multimedia Group 1 Opcodes
+// The Multimedia Group 1 Opcodes (Shift/Shamft)
 const std::map<int, std::string> multimedia_group_1{
-    {1, "PABSW"},   {2, "PCEQW"},   {3, "PMINW"},   {4, "PADSBH"},  {5, "PABSH"},   {6, "PCEQH"},
-    {7, "PMINH"},   {10, "PCEQB"},  {16, "PADDUW"}, {17, "PSUBUW"}, {18, "PEXTUW"}, {20, "PADDUH"},
-    {21, "PSUBUH"}, {22, "PEXTUH"}, {24, "PADDUB"}, {25, "PSUBUB"}, {26, "PEXTUB"}, {27, "QFSRV"},
+    {1, "PABSW"},   
+    {2, "PCEQW"},   
+    {3, "PMINW"},   
+    {4, "PADSBH"},  
+    {5, "PABSH"},   
+    {6, "PCEQH"},
+    {7, "PMINH"},   
+    {8, "MMI ??"},
+    {9, "MMI ??"},
+    {10, "PCEQB"},  
+    {11, "MMI ??"},
+    {12, "MMI ??"},
+    {13, "MMI ??"},
+    {14, "MMI ??"},
+    {15, "MMI ??"}, 
+    {16, "PADDUW"}, 
+    {17, "PSUBUW"}, 
+    {18, "PEXTUW"}, 
+    {19, "MMI ??"},
+    {20, "PADDUH"},
+    {21, "PSUBUH"}, 
+    {22, "PEXTUH"}, 
+    {23, "MMI ??"},
+    {24, "PADDUB"}, 
+    {25, "PSUBUB"}, 
+    {26, "PEXTUB"}, 
+    {27, "QFSRV"},
+    {28, "MMI ??"},
+    {29, "MMI ??"},
+    {30, "MMI ??"},
+    {31, "MMI ??"}
 };
 
-// The Multimedia Group 2 Opcodes
+// The Multimedia Group 2 Opcodes (Shift/Shamft)
 const std::map<int, std::string> multimedia_group_2{
-    {0, "PMADDW"},  {2, "PSLLVW"},  {3, "PSRLVW"},  {4, "PMSUBW"},  {8, "PMFHI"},   {9, "PMFLO"},  {10, "PINTH"},  
-    {12, "PMULTW"},  {13, "PDIVW"},   {14, "CPLYD"},  {16, "PMADDH"}, {17, "PHMADH"}, {18, "PAND"},  {19, "PXOR"},  
-    {20, "PMSUBH"}, {21, "PHMSBH"}, {26, "PEXEH"},  {27, "PREVH"},  {28, "PMULTH"}, {29, "PDIVBW"}, {30, "PEXEW"}, 
-    {31, "PROT3W"},
+    {0, "PMADDW"},  
+    {1, "MMI ??"},
+    {2, "PSLLVW"},  
+    {3, "PSRLVW"},  
+    {4, "PMSUBW"},  
+    {5, "MMI ??"},
+    {6, "MMI ??"},
+    {7, "MMI ??"},
+    {8, "PMFHI"},   
+    {9, "PMFLO"},
+    {10, "PINTH"},  
+    {11, "MMI ??"},
+    {12, "PMULTW"}, 
+    {13, "PDIVW"},  
+    {14, "CPLYD"},  
+    {15, "MMI ??"},
+    {16, "PMADDH"}, 
+    {17, "PHMADH"},
+    {18, "PAND"},   
+    {19, "PXOR"},   
+    {20, "PMSUBH"}, 
+    {21, "PHMSBH"}, 
+    {22, "MMI ??"},
+    {23, "MMI ??"},
+    {24, "MMI ??"},
+    {25, "MMI ??"},
+    {26, "PEXEH"},  
+    {27, "PREVH"},
+    {28, "PMULTH"}, 
+    {29, "PDIVBW"}, 
+    {30, "PEXEW"},  
+    {31, "PROT3W"}
 };
 
-// The Multimedia Group 3 Opcodes
+// The Multimedia Group 3 Opcodes (Shift/Shamft)
 const std::map<int, std::string> multimedia_group_3{
-    {0, "PMADDUW"}, {3, "PSRAVW"}, {8, "PMTHI"}, {9, "PMTLO"},  {10, "PINTEH"}, {12, "PMULTUW"}, {13, "PDIVUW"},
-    {14, "PCPYUD"}, {18, "POR"},   {19, "PNOR"}, {26, "PEXCH"}, {27, "PCPYH"},  {30, "PEXCW"},
+    {0, "PMADDUW"}, 
+    {1, "MMI ??"},
+    {2, "MMI ??"},
+    {3, "PSRAVW"}, 
+    {4, "MMI ??"},
+    {5, "MMI ??"},
+    {6, "MMI ??"},
+    {7, "MMI ??"},
+    {8, "PMTHI"}, 
+    {9, "PMTLO"},  
+    {10, "PINTEH"}, 
+    {11, "MMI ??"},
+    {12, "PMULTUW"}, 
+    {13, "PDIVUW"},
+    {14, "PCPYUD"}, 
+    {15, "MMI ??"},
+    {16, "MMI ??"},
+    {17, "MMI ??"},
+    {18, "POR"},   
+    {19, "PNOR"}, 
+    {20, "MMI ??"},
+    {21, "MMI ??"},
+    {22, "MMI ??"},
+    {23, "MMI ??"},
+    {24, "MMI ??"},
+    {25, "MMI ??"},
+    {26, "PEXCH"}, 
+    {27, "PCPYH"},  
+    {28, "MMI ??"},
+    {29, "MMI ??"},
+    {30, "PEXCW"},
+    {31, "MMI ??"}
 };
 
-// The System Control Coprocessor Opcodes
+// The System Control Coprocessor Opcodes (Source)
 const std::map<int, std::string> coprocessor_0_instructions{
     {0, "MFC0"},
+    {1, "COP ??"},
+    {2, "COP ??"},
+    {3, "COP ??"},
     {4, "MTC0"},
+    {5, "COP ??"},
+    {6, "COP ??"},
+    {7, "COP ??"},
     {8, "Branch on Coprocessor 0"},
+    {9, "COP ??"},
+    {10, "COP ??"},
+    {11, "COP ??"},
+    {12, "COP ??"},
+    {13, "COP ??"},
+    {14, "COP ??"},
+    {15, "COP ??"},
     {16, "Translation Lookaside Buffer/Exceptions"},
+    {17, "COP ??"},
+    {18, "COP ??"},
+    {19, "COP ??"},
+    {20, "COP ??"},
+    {21, "COP ??"},
+    {22, "COP ??"},
+    {23, "COP ??"},
+    {24, "COP ??"},
+    {25, "COP ??"},
+    {26, "COP ??"},
+    {27, "COP ??"},
+    {28, "COP ??"},
+    {29, "COP ??"},
+    {30, "COP ??"},
+    {31, "COP ??"}
 };
 
-// The Branchon Coprocessor 0 Opcodes
+// The Branchon Coprocessor 0 Opcodes (Source2/Target)
 const std::map<int, std::string> bc0_instructions{
     {0, "BC0F"},
     {1, "BC0T"},
     {2, "BC0FL"},
     {3, "BC0TL"},
+    {4, "COP ??"},
+    {5, "COP ??"},
+    {6, "COP ??"},
+    {7, "COP ??"},
+    {8, "COP ??"},
+    {9, "COP ??"},
+    {10, "COP ??"},
+    {11, "COP ??"},
+    {12, "COP ??"},
+    {13, "COP ??"},
+    {14, "COP ??"},
+    {15, "COP ??"},
+    {16, "COP ??"},
+    {17, "COP ??"},
+    {18, "COP ??"},
+    {19, "COP ??"},
+    {20, "COP ??"},
+    {21, "COP ??"},
+    {22, "COP ??"},
+    {23, "COP ??"},
+    {24, "COP ??"},
+    {25, "COP ??"},
+    {26, "COP ??"},
+    {27, "COP ??"},
+    {28, "COP ??"},
+    {29, "COP ??"},
+    {30, "COP ??"},
+    {31, "COP ??"}
 };
 
-// The Translation Lookaside Buffer/Exception Opcodes
+// The Translation Lookaside Buffer/Exception Opcodes (Function)
 const std::map<int, std::string> tlb_exception_instructions{
-    {1, "TLBR"}, {2, "TLBWI"}, {6, "TLBWR"}, {8, "TLBP"}, {24, "ERET"}, {56, "EI"}, {57, "DI"},
+    {0, "COP ??"},
+    {1, "TLBR"}, 
+    {2, "TLBWI"}, 
+    {3, "COP ??"},
+    {4, "COP ??"},
+    {5, "COP ??"},
+    {6, "TLBWR"},
+    {7, "COP ??"}, 
+    {8, "TLBP"},
+    {9, "COP ??"}, 
+    {10, "COP ??"},
+    {11, "COP ??"},
+    {12, "COP ??"},
+    {13, "COP ??"},
+    {14, "COP ??"},
+    {15, "COP ??"},
+    {16, "COP ??"},
+    {17, "COP ??"},
+    {18, "COP ??"},
+    {19, "COP ??"},
+    {20, "COP ??"},
+    {21, "COP ??"},
+    {22, "COP ??"},
+    {23, "COP ??"},
+    {24, "ERET"}, 
+    {25, "COP ??"},
+    {26, "COP ??"},
+    {27, "COP ??"},
+    {28, "COP ??"},
+    {29, "COP ??"},
+    {30, "COP ??"},
+    {31, "COP ??"},
+    {32, "COP ??"},
+    {33, "COP ??"},
+    {34, "COP ??"},
+    {35, "COP ??"},
+    {36, "COP ??"},
+    {37, "COP ??"},
+    {38, "COP ??"},
+    {39, "COP ??"},
+    {40, "COP ??"},
+    {41, "COP ??"},
+    {42, "COP ??"},
+    {43, "COP ??"},
+    {44, "COP ??"},
+    {45, "COP ??"},
+    {46, "COP ??"},
+    {47, "COP ??"},
+    {48, "COP ??"},
+    {49, "COP ??"},
+    {50, "COP ??"},
+    {51, "COP ??"},
+    {52, "COP ??"},
+    {53, "COP ??"},
+    {54, "COP ??"},
+    {55, "COP ??"},
+    {56, "EI"}, 
+    {57, "DI"},
+    {58, "COP ??"},
+    {59, "COP ??"},
+    {60, "COP ??"},
+    {61, "COP ??"},
+    {62, "COP ??"},
+    {63, "COP ??"}
 };
 
-// The Floating Point Unit Opcodes
+// The Floating Point Unit Opcodes (Source)
 const std::map<int, std::string> coprocessor_1_instructions{
     {0, "MFC1"},
+    {1, "FPU ??"},
     {2, "CFC1"},
+    {3, "FPU ??"},
     {4, "MTC1"},
+    {5, "FPU ??"},
     {6, "CTC1"},
+    {7, "FPU ??"},
     {8, "Branch on Coprocessor 1"},
+    {9, "FPU ??"},
+    {10, "FPU ??"},
+    {11, "FPU ??"},
+    {12, "FPU ??"},
+    {13, "FPU ??"},
+    {14, "FPU ??"},
+    {15, "FPU ??"},
     {16, "Floating Point Unit Single Precision"},
+    {17, "FPU ??"},
+    {18, "FPU ??"},
+    {19, "FPU ??"},
     {20, "Floating Point Unit Word"},
+    {21, "FPU ??"},
+    {22, "FPU ??"},
+    {23, "FPU ??"},
+    {24, "FPU ??"},
+    {25, "FPU ??"},
+    {26, "FPU ??"},
+    {27, "FPU ??"},
+    {28, "FPU ??"},
+    {29, "FPU ??"},
+    {30, "FPU ??"},
+    {31, "FPU ??"}
 };
 
-// The Branch on Coprocessor 1 Opcodes
+// The Branch on Coprocessor 1 Opcodes (Source2/Target)
 const std::map<int, std::string> bc1_instructions{
     {0, "BC1F"},
     {1, "BC1T"},
     {2, "BC1FL"},
     {3, "BC1TL"},
+    {4, "FPU ??"},
+    {5, "FPU ??"},
+    {6, "FPU ??"},
+    {7, "FPU ??"},
+    {8, "FPU ??"},
+    {9, "FPU ??"},
+    {10, "FPU ??"},
+    {11, "FPU ??"},
+    {12, "FPU ??"},
+    {13, "FPU ??"},
+    {14, "FPU ??"},
+    {15, "FPU ??"},
+    {16, "FPU ??"},
+    {17, "FPU ??"},
+    {18, "FPU ??"},
+    {19, "FPU ??"},
+    {20, "FPU ??"},
+    {21, "FPU ??"},
+    {22, "FPU ??"},
+    {23, "FPU ??"},
+    {24, "FPU ??"},
+    {25, "FPU ??"},
+    {26, "FPU ??"},
+    {27, "FPU ??"},
+    {28, "FPU ??"},
+    {29, "FPU ??"},
+    {30, "FPU ??"},
+    {31, "FPU ??"}
 };
 
-// The Single-Precision Floating Point Unit Opcodes
+// The Single-Precision Floating Point Unit Opcodes (Function)
 const std::map<int, std::string> fpu_s_instructions{
-    {0, "ADD.S"},   {1, "SUB.S"},   {2, "MUL.S"},    {3, "DIV.S"},    {4, "SQRT.S"},  {5, "ABS.S"},
-    {6, "MOV.S"},   {7, "NEG.S"},   {22, "RSQRT.S"}, {24, "ADDA.S"},  {25, "SUBA.S"}, {26, "MULA.S"},
-    {28, "MADD.S"}, {29, "MSUB.S"}, {30, "MADDA.S"}, {31, "MSUBA.S"}, {36, "CVT.W"}, {40, "MAX.S"},  
-    {41, "MIN.S"}, {48, "C.F"},    {50, "C.EQ"},   {52, "C.LT"},    {54, "C.LE"},
+    {0, "ADD.S"},   
+    {1, "SUB.S"},   
+    {2, "MUL.S"},    
+    {3, "DIV.S"},    
+    {4, "SQRT.S"},  
+    {5, "ABS.S"},
+    {6, "MOV.S"},   
+    {7, "NEG.S"},   
+    {8, "FPU ??"},
+    {9, "FPU ??"}, 
+    {10, "FPU ??"},
+    {11, "FPU ??"},
+    {12, "FPU ??"},
+    {13, "FPU ??"},
+    {14, "FPU ??"},
+    {15, "FPU ??"},
+    {16, "FPU ??"},
+    {17, "FPU ??"},
+    {18, "FPU ??"},
+    {19, "FPU ??"},
+    {20, "FPU ??"},
+    {21, "FPU ??"},
+    {22, "RSQRT.S"}, 
+    {23, "FPU ??"},
+    {24, "ADDA.S"},  
+    {25, "SUBA.S"}, 
+    {26, "MULA.S"},
+    {27, "FPU ??"},
+    {28, "MADD.S"}, 
+    {29, "MSUB.S"}, 
+    {30, "MADDA.S"}, 
+    {31, "MSUBA.S"}, 
+    {32, "FPU ??"}, 
+    {33, "FPU ??"},
+    {34, "FPU ??"},
+    {35, "FPU ??"},
+    {36, "CVT.W"},  
+    {37, "FPU ??"},
+    {38, "FPU ??"},
+    {39, "FPU ??"},
+    {40, "MAX.S"},
+    {41, "MIN.S"},  
+    {42, "FPU ??"},
+    {43, "FPU ??"},
+    {44, "FPU ??"},
+    {45, "FPU ??"},
+    {46, "FPU ??"},
+    {47, "FPU ??"},
+    {48, "C.F"},    
+    {49, "FPU ??"},
+    {50, "C.EQ"},
+    {51, "FPU ??"},    
+    {52, "C.LT"},    
+    {53, "FPU ??"},
+    {54, "C.LE"},
+    {55, "FPU ??"},
+    {56, "FPU ??"},
+    {57, "FPU ??"},
+    {58, "FPU ??"},
+    {59, "FPU ??"},
+    {60, "FPU ??"},
+    {61, "FPU ??"},
+    {62, "FPU ??"},
+    {63, "FPU ??"}
 };
 
-// The Word Fixed-Point Floating Point Unit Opcodes
+// The Word Fixed-Point Floating Point Unit Opcodes (Function)
 const std::map<int, std::string> fpu_w_instructions{
+    {0, "FPU ??"},
+    {1, "FPU ??"},
+    {2, "FPU ??"},
+    {3, "FPU ??"},
+    {4, "FPU ??"},
+    {5, "FPU ??"},
+    {6, "FPU ??"},
+    {7, "FPU ??"},
+    {8, "FPU ??"},
+    {9, "FPU ??"},
+    {10, "FPU ??"},
+    {11, "FPU ??"},
+    {12, "FPU ??"},
+    {13, "FPU ??"},
+    {14, "FPU ??"},
+    {15, "FPU ??"},
+    {16, "FPU ??"},
+    {17, "FPU ??"},
+    {18, "FPU ??"},
+    {19, "FPU ??"},
+    {20, "FPU ??"},
+    {21, "FPU ??"},
+    {22, "FPU ??"},
+    {23, "FPU ??"},
+    {24, "FPU ??"},
+    {25, "FPU ??"},
+    {26, "FPU ??"},
+    {27, "FPU ??"},
+    {28, "FPU ??"},
+    {29, "FPU ??"},
+    {30, "FPU ??"},
+    {31, "FPU ??"},
     {32, "CVT.S"},
+    {33, "FPU ??"},
+    {34, "FPU ??"},
+    {35, "FPU ??"},
+    {36, "FPU ??"},
+    {37, "FPU ??"},
+    {38, "FPU ??"},
+    {39, "FPU ??"},
+    {40, "FPU ??"},
+    {41, "FPU ??"},
+    {42, "FPU ??"},
+    {43, "FPU ??"},
+    {44, "FPU ??"},
+    {45, "FPU ??"},
+    {46, "FPU ??"},
+    {47, "FPU ??"},
+    {48, "FPU ??"},
+    {49, "FPU ??"},
+    {50, "FPU ??"},
+    {51, "FPU ??"},
+    {52, "FPU ??"},
+    {53, "FPU ??"},
+    {54, "FPU ??"},
+    {55, "FPU ??"},
+    {56, "FPU ??"},
+    {57, "FPU ??"},
+    {58, "FPU ??"},
+    {59, "FPU ??"},
+    {60, "FPU ??"},
+    {61, "FPU ??"},
+    {62, "FPU ??"},
+    {63, "FPU ??"}
 };
 
-// The Vector Processing Unit Opcodes
+// The Vector Processing Unit Opcodes (Source)
 const std::map<int, std::string> coprocessor_2_instructions{
-    {1, "QMFC2"},      {2, "CFC2"},       {5, "QMTC2"},      {6, "CTC2"},       {8, "Branch on Coprocessor 2"},
-    {16, "Special 1"}, {17, "Special 1"}, {18, "Special 1"}, {19, "Special 1"}, {20, "Special 1"},
-    {21, "Special 1"}, {22, "Special 1"}, {23, "Special 1"}, {24, "Special 1"}, {25, "Special 1"},
-    {26, "Special 1"}, {27, "Special 1"}, {28, "Special 1"}, {29, "Special 1"}, {30, "Special 1"},
-    {31, "Special 1"}};
+    {0, "VPU ??"},
+    {1, "QMFC2"},      
+    {2, "CFC2"},    
+    {3, "VPU ??"},   
+    {4, "VPU ??"},
+    {5, "QMTC2"},      
+    {6, "CTC2"},       
+    {7, "VPU ??"},
+    {8, "Branch on Coprocessor 2"},
+    {9, "VPU ??"},
+    {10, "VPU ??"},
+    {11, "VPU ??"},
+    {12, "VPU ??"},
+    {13, "VPU ??"},
+    {14, "VPU ??"},
+    {15, "VPU ??"},
+    {16, "Special 1"}, 
+    {17, "Special 1"}, 
+    {18, "Special 1"}, 
+    {19, "Special 1"}, 
+    {20, "Special 1"},
+    {21, "Special 1"}, 
+    {22, "Special 1"}, 
+    {23, "Special 1"}, 
+    {24, "Special 1"}, 
+    {25, "Special 1"},
+    {26, "Special 1"}, 
+    {27, "Special 1"}, 
+    {28, "Special 1"}, 
+    {29, "Special 1"}, 
+    {30, "Special 1"},
+    {31, "Special 1"}
+};
 
-// The Branch on Coprocessor 2 Opcodes
+// The Branch on Coprocessor 2 Opcodes (Source2/Target)
 const std::map<int, std::string> bc2_instructions{
     {0, "BC2F"},
     {1, "BC2T"},
     {2, "BC2FL"},
     {3, "BC2TL"},
+    {4, "VPU ??"},
+    {5, "VPU ??"},
+    {6, "VPU ??"},
+    {7, "VPU ??"},
+    {8, "VPU ??"},
+    {9, "VPU ??"},
+    {10, "VPU ??"},
+    {11, "VPU ??"},
+    {12, "VPU ??"},
+    {13, "VPU ??"},
+    {14, "VPU ??"},
+    {15, "VPU ??"},
+    {16, "VPU ??"},
+    {17, "VPU ??"},
+    {18, "VPU ??"},
+    {19, "VPU ??"},
+    {20, "VPU ??"},
+    {21, "VPU ??"},
+    {22, "VPU ??"},
+    {23, "VPU ??"},
+    {24, "VPU ??"},
+    {25, "VPU ??"},
+    {26, "VPU ??"},
+    {27, "VPU ??"},
+    {28, "VPU ??"},
+    {29, "VPU ??"},
+    {30, "VPU ??"},
+    {31, "VPU ??"}
 };
 
-// The VPU 1st Extension Opcodes
+// The VPU 1st Extension Opcodes (Function)
 const std::map<int, std::string> cop2_special1_instructions{
-    {0, "VADDx"},    {1, "VADDy"},      {2, "VADDz"},      {3, "VADDw"},      {4, "VSUBx"},     {5, "VSUBy"},
-    {6, "VSUBz"},    {7, "VSUBw"},      {8, "VMADDx"},     {9, "VMADDy"},     {10, "VMADDz"},   {11, "VMADDw"},
-    {12, "VMSUBx"},  {13, "VMSUBy"},    {14, "VMSUBz"},    {15, "VMSUBw"},    {16, "VMAXx"},    {17, "VMAXy"},
-    {18, "VMAXz"},   {19, "VMAXw"},     {20, "VMINIx"},    {21, "VMINIy"},    {22, "VMINIz"},   {23, "VMINIw"},
-    {24, "VMULx"},   {25, "VMULy"},     {26, "VMULz"},     {27, "VMULw"},     {28, "VMULq"},    {29, "VMAXi"},
-    {30, "VMULi"},   {31, "VMINIi"},    {32, "VADDq"},     {33, "VMADDq"},    {34, "VADDi"},    {35, "VMADDi"},
-    {36, "VSUBq"},   {37, "VMSUBq"},    {38, "VSUBi"},     {39, "VMSUBi"},    {40, "VADD"},     {41, "VMADD"},
-    {42, "VMUL"},    {43, "VMAX"},      {44, "VSUB"},      {45, "VMSUB"},     {46, "VOPMSUB"},  {47, "VMINI"},
-    {48, "VIADD"},   {49, "VISUB"},     {50, "VIADDI"},    {52, "VIAND"},     {53, "VIOR"},     {56, "VCALLMS"},
-    {57, "CALLMSR"}, {60, "Special 2"}, {61, "Special 2"}, {62, "Special 2"}, {63, "Special 2"}};
+    {0, "VADDx"},    
+    {1, "VADDy"},      
+    {2, "VADDz"},      
+    {3, "VADDw"},      
+    {4, "VSUBx"},     
+    {5, "VSUBy"},
+    {6, "VSUBz"},    
+    {7, "VSUBw"},      
+    {8, "VMADDx"},     
+    {9, "VMADDy"},     
+    {10, "VMADDz"},   
+    {11, "VMADDw"},
+    {12, "VMSUBx"},  
+    {13, "VMSUBy"},    
+    {14, "VMSUBz"},    
+    {15, "VMSUBw"},    
+    {16, "VMAXx"},    
+    {17, "VMAXy"},
+    {18, "VMAXz"},   
+    {19, "VMAXw"},     
+    {20, "VMINIx"},    
+    {21, "VMINIy"},    
+    {22, "VMINIz"},   
+    {23, "VMINIw"},
+    {24, "VMULx"},   
+    {25, "VMULy"},     
+    {26, "VMULz"},     
+    {27, "VMULw"},     
+    {28, "VMULq"},    
+    {29, "VMAXi"},
+    {30, "VMULi"},   
+    {31, "VMINIi"},    
+    {32, "VADDq"},     
+    {33, "VMADDq"},    
+    {34, "VADDi"},    
+    {35, "VMADDi"},
+    {36, "VSUBq"},   
+    {37, "VMSUBq"},    
+    {38, "VSUBi"},     
+    {39, "VMSUBi"},    
+    {40, "VADD"},     
+    {41, "VMADD"},
+    {42, "VMUL"},    
+    {43, "VMAX"},      
+    {44, "VSUB"},      
+    {45, "VMSUB"},     
+    {46, "VOPMSUB"},  
+    {47, "VMINI"},
+    {48, "VIADD"},   
+    {49, "VISUB"},     
+    {50, "VIADDI"},    
+    {51, "VPU ??"},
+    {52, "VIAND"},     
+    {53, "VIOR"},     
+    {54, "VPU ??"},
+    {55, "VPU ??"},
+    {56, "VCALLMS"},
+    {57, "CALLMSR"}, 
+    {58, "VPU ??"},
+    {59, "VPU ??"},
+    {60, "Special 2"}, 
+    {61, "Special 2"}, 
+    {62, "Special 2"}, 
+    {63, "Special 2"}
+};
 
-// The VPU 2nd Extension Opcodes
+// The VPU 2nd Extension Opcodes [(Shift << 2) | (Function & 0x3)]
 const std::map<int, std::string> cop2_special2_instructions{
-    {0, "VADDAx"},   {1, "VADDAy"},   {2, "VADDAz"},   {3, "VADDAw"},   {4, "VSUBAx"},   {5, "VSUBAy"},
-    {6, "VSUBAz"},   {7, "VSUBAw"},   {8, "VMADDAx"},  {9, "VMADDAy"},  {10, "VMADDAz"}, {11, "VMADDAw"},
-    {12, "VMSUBAx"}, {13, "VMSUBAy"}, {14, "VMSUBAz"}, {15, "VMSUBAw"}, {16, "VITOF0"},  {17, "VITOF4"},
-    {18, "VITOF12"}, {19, "VITOF15"}, {20, "VFTOI0"},  {21, "VFTOI4"},  {22, "VFTOI12"}, {23, "VFTOI15"},
-    {24, "VMULAx"},  {25, "VMULAy"},  {26, "VMULAz"},  {27, "VMULAw"},  {28, "VMULAq"},  {29, "VABS"},
-    {30, "VMULAi"},  {31, "VCLIPw"},  {32, "VADDAq"},  {33, "VMADDAq"}, {34, "VADDAi"},  {35, "VMADDAi"},
-    {36, "VSUBAq"},  {37, "VMSUBAq"}, {38, "VSUBAi"},  {39, "VMSUBAi"}, {40, "VADDA"},   {41, "VMADDA"},
-    {42, "VMULA"},   {44, "VSUBA"},   {45, "VMSUBA"},  {46, "VOPMULA"}, {47, "VNOP"},    {48, "VMOVE"},
-    {49, "VMR32"},   {52, "VLQI"},    {53, "VSQI"},    {54, "VLQD"},    {55, "VSQD"},    {56, "VDIV"},
-    {57, "VSQRT"},   {58, "VRSQRT"},  {59, "VWAITQ"},  {60, "VMTIR"},   {61, "VMFIR"},   {62, "VILWR"},
-    {63, "VISWR"},   {64, "VRNEXT"},  {65, "VRGET"},   {66, "VRINIT"},  {67, "VRXOR"},
+    {0, "VADDAx"},   
+    {1, "VADDAy"},   
+    {2, "VADDAz"},   
+    {3, "VADDAw"},   
+    {4, "VSUBAx"},   
+    {5, "VSUBAy"},
+    {6, "VSUBAz"},   
+    {7, "VSUBAw"},   
+    {8, "VMADDAx"},  
+    {9, "VMADDAy"},  
+    {10, "VMADDAz"}, 
+    {11, "VMADDAw"},
+    {12, "VMSUBAx"}, 
+    {13, "VMSUBAy"}, 
+    {14, "VMSUBAz"}, 
+    {15, "VMSUBAw"}, 
+    {16, "VITOF0"},  
+    {17, "VITOF4"},
+    {18, "VITOF12"}, 
+    {19, "VITOF15"}, 
+    {20, "VFTOI0"},  
+    {21, "VFTOI4"},  
+    {22, "VFTOI12"}, 
+    {23, "VFTOI15"},
+    {24, "VMULAx"},  
+    {25, "VMULAy"},  
+    {26, "VMULAz"},  
+    {27, "VMULAw"},  
+    {28, "VMULAq"},  
+    {29, "VABS"},
+    {30, "VMULAi"},  
+    {31, "VCLIPw"},  
+    {32, "VADDAq"},  
+    {33, "VMADDAq"}, 
+    {34, "VADDAi"},  
+    {35, "VMADDAi"},
+    {36, "VSUBAq"},  
+    {37, "VMSUBAq"}, 
+    {38, "VSUBAi"},  
+    {39, "VMSUBAi"}, 
+    {40, "VADDA"},   
+    {41, "VMADDA"},
+    {42, "VMULA"},   
+    {43, "VPU ??"},
+    {44, "VSUBA"},   
+    {45, "VMSUBA"},  
+    {46, "VOPMULA"}, 
+    {47, "VNOP"},    
+    {48, "VMOVE"},
+    {49, "VMR32"},   
+    {50, "VPU ??"},
+    {51, "VPU ??"},
+    {52, "VLQI"},    
+    {53, "VSQI"},    
+    {54, "VLQD"},    
+    {55, "VSQD"},    
+    {56, "VDIV"},
+    {57, "VSQRT"},   
+    {58, "VRSQRT"},  
+    {59, "VWAITQ"},  
+    {60, "VMTIR"},   
+    {61, "VMFIR"},   
+    {62, "VILWR"},
+    {63, "VISWR"},   
+    {64, "VRNEXT"},  
+    {65, "VRGET"},   
+    {66, "VRINIT"},  
+    {67, "VRXOR"}, 
+    {68, "VPU ??"},
+    {69, "VPU ??"},
+    {70, "VPU ??"},
+    {71, "VPU ??"},
+    {72, "VPU ??"},
+    {73, "VPU ??"},
+    {74, "VPU ??"},
+    {75, "VPU ??"},
+    {76, "VPU ??"},
+    {77, "VPU ??"},
+    {78, "VPU ??"},
+    {79, "VPU ??"},
+    {80, "VPU ??"},
+    {81, "VPU ??"},
+    {82, "VPU ??"},
+    {83, "VPU ??"},
+    {84, "VPU ??"},
+    {85, "VPU ??"},
+    {86, "VPU ??"},
+    {87, "VPU ??"},
+    {88, "VPU ??"},
+    {89, "VPU ??"},
+    {90, "VPU ??"},
+    {91, "VPU ??"},
+    {92, "VPU ??"},
+    {93, "VPU ??"},
+    {94, "VPU ??"},
+    {95, "VPU ??"},
+    {96, "VPU ??"},
+    {97, "VPU ??"},
+    {98, "VPU ??"},
+    {99, "VPU ??"},
+    {100, "VPU ??"},
+    {101, "VPU ??"},
+    {102, "VPU ??"},
+    {103, "VPU ??"},
+    {104, "VPU ??"},
+    {105, "VPU ??"},
+    {106, "VPU ??"},
+    {107, "VPU ??"},
+    {108, "VPU ??"},
+    {109, "VPU ??"},
+    {110, "VPU ??"},
+    {111, "VPU ??"},
+    {112, "VPU ??"},
+    {113, "VPU ??"},
+    {114, "VPU ??"},
+    {115, "VPU ??"},
+    {116, "VPU ??"},
+    {117, "VPU ??"},
+    {118, "VPU ??"},
+    {119, "VPU ??"},
+    {120, "VPU ??"},
+    {121, "VPU ??"},
+    {122, "VPU ??"},
+    {123, "VPU ??"},
+    {124, "VPU ??"},
+    {125, "VPU ??"},
+    {126, "VPU ??"},
+    {127, "VPU ??"}
 };
 
 // Opcode Group names
@@ -293,10 +1089,89 @@ const std::map<int, std::string> opcode_groups{
     {15, "Vector Processing Unit Coprocessor"},
     {16, "Branch on VPU Coprocessor"},
     {17, "VPU Extension 1"},
-    {18, "VPU Extension 2"},
+    {18, "VPU Extension 2"}
 };
 
+// General Program Registers
+const std::map<int, std::string> general_program_registers{
+    {0, "zero"},
+    {1, "at"},
+    {2, "v0"},
+    {3, "v1"},
+    {4, "a0"},
+    {5, "a1"},
+    {6, "a2"},
+    {7, "a3"},
+    {8, "t0"},
+    {9, "t1"},
+    {10, "t2"},
+    {11, "t3"},
+    {12, "t4"},
+    {13, "t5"},
+    {14, "t6"},
+    {15, "t7"},
+    {16, "s0"},
+    {17, "s1"},
+    {18, "s2"},
+    {19, "s3"},
+    {20, "s4"},
+    {21, "s5"},
+    {22, "s6"},
+    {23, "s7"},
+    {24, "t8"},
+    {25, "t9"},
+    {26, "k0"},
+    {27, "k1"},
+    {28, "gp"},
+    {29, "sp"},
+    {30, "fp"},
+    {31, "ra"},
+    {32, "pc"},
+    {33, "hi"},
+    {34, "lo"}
+};
+
+
 //? Enumeration keyword for all above instructions
+
+// General Program Registers
+enum class GPR : uint8_t {
+    ZERO = 0, // always 0
+    AT, // idk
+    V0, // input variable 1 or something
+    V1,
+    A0, // argument 1 or smth
+    A1,
+    A2, 
+    A3,
+    T0, // temp var 1 or smth
+    T1,
+    T2,
+    T3,
+    T4,
+    T5,
+    T6,
+    T7,
+    S0, // saved var 1 or smth
+    S1,
+    S2,
+    S3,
+    S4,
+    S5,
+    S6,
+    S7,
+    T8,
+    T9,
+    K0, // kernal var 1 or smth
+    K1,
+    GP, // Global Pointer
+    SP, // Stack Pointer
+    FP, // idk
+    RA, // Return Address
+    PC, // Program Counter
+    HI, // i don't remember
+    LO, // i don't remember
+};
 
 // The Standard Opcodes and their integer representations
 enum class STANDARD_INSTRUCTIONS : uint32_t {
@@ -1058,12 +1933,12 @@ constexpr std::array<COP2_SPECIAL2_INSTRUCTIONS, static_cast<int>(41)> Cop2_Spec
 //? Requires access to enums and maps above it
 
 struct BinaryInstructionUniversal {
-    OPCODE_GROUP opcode_group = OPCODE_GROUP::STANDARD;
+    OPCODE_GROUP opcode_group = setOpcodeGroup();
 
     char instruction_type;
     uint32_t instruction;  // The baseline instruction that everything should reference
     int file_location;
-   
+
    private:
     BinaryInstructionR register_instruction = {
         static_cast<uint8_t>(instruction >> 26),          // opcode
@@ -1085,6 +1960,52 @@ struct BinaryInstructionUniversal {
         static_cast<uint8_t>(instruction >> 26),  // opcode
         (instruction << 6) >> 6                   // psuedo address
     };
+
+    OPCODE_GROUP setOpcodeGroup_SystemControl() {
+        if (immediate_instruction.source_register == 8) {
+            return OPCODE_GROUP::BRANCH_ON_COPROCESSOR_0;
+        } else if (immediate_instruction.source_register == 16) {
+            return OPCODE_GROUP::TRANSLATION_LOOKASIDE_BUFFER;
+        }
+        return OPCODE_GROUP::SYSTEM_CONTROL_COPROCESSOR;
+    }
+
+    OPCODE_GROUP setOpcodeGroup_FloatingPointUnit() {
+        if (immediate_instruction.source_register == 8) {
+            return OPCODE_GROUP::BRANCH_ON_COPROCESSOR_1;
+        } else if (immediate_instruction.source_register == 16) {
+            return OPCODE_GROUP::FLOATING_POINT_UNIT_SINGLE_PRECISION;
+        } else if (immediate_instruction.source_register == 20) {
+            return OPCODE_GROUP::FLOATING_POINT_UNIT_WORD;
+        }
+        return OPCODE_GROUP::FLOATING_POINT_UNIT_COPROCESSOR;
+    }
+
+    OPCODE_GROUP setOpcodeGroup_VectorProcessingUnit() {
+        if (immediate_instruction.source_register == 8) {
+            return OPCODE_GROUP::BRANCH_ON_COPROCESSOR_2;
+        } else if (immediate_instruction.source_register > 15 && register_instruction.function_code > 59) {
+            return OPCODE_GROUP::COP2_EXTENSION_2;
+        } else if (immediate_instruction.source_register > 15) {
+            return OPCODE_GROUP::COP2_EXTENSION_1;
+        }
+        return OPCODE_GROUP::VECTOR_PROCESSING_UNIT_COPROCESSOR;
+    }
+
+    OPCODE_GROUP setOpcodeGroup_MultimediaExtensions() {
+        switch (register_instruction.function_code) {
+            case 8:
+                return OPCODE_GROUP::MULTIMEDIA_GROUP_0;
+            case 9:
+                return OPCODE_GROUP::MULTIMEDIA_GROUP_2;
+            case 40:
+                return OPCODE_GROUP::MULTIMEDIA_GROUP_1;
+            case 41:
+                return OPCODE_GROUP::MULTIMEDIA_GROUP_3;
+            default:
+                return OPCODE_GROUP::MULTIMEDIA_EXTENSIONS;
+        }
+    }
 
     //! Write try catch data
     std::string setOpcodeName_MultimediaExtension() {
@@ -1139,21 +2060,19 @@ struct BinaryInstructionUniversal {
                 try {
                     return_value = bc1_instructions.at(static_cast<int>(register_instruction.source_register2));
                 } catch (const std::out_of_range& e) {
-                    std::cout
-                        << "ERROR: Branch on COP1 Instruction isn't in the database.\nReported Statistics:\n";
+                    std::cout << "ERROR: Branch on COP1 Instruction isn't in the database.\nReported Statistics:\n";
                     std::cout << "  Location in File(bytes from the start): " << file_location << "\n";
                     std::cout << "  Instruction(int): " << instruction << "\n";
                     std::cout << "  Instruction(hex): " << std::hex << instruction << "\n";
                     std::cout << "  Instruction(bin): " << std::dec << int_to_binary(instruction) << "\n";
                     std::cout << "  Source Register: " << static_cast<int>(register_instruction.source_register1)
                               << "\n";
-                    std::cout << "  Other Source Register(0-31): " << static_cast<int>(register_instruction.source_register2)
-                              << "\n";
+                    std::cout << "  Other Source Register(0-31): "
+                              << static_cast<int>(register_instruction.source_register2) << "\n";
                     std::cout << "  Target Register: " << static_cast<int>(register_instruction.target_register)
                               << "\n";
                     std::cout << "  Shift Value: " << static_cast<int>(register_instruction.shift_value) << "\n";
-                    std::cout << "  Function Code: " << static_cast<int>(register_instruction.function_code)
-                              << "\n\n";
+                    std::cout << "  Function Code: " << static_cast<int>(register_instruction.function_code) << "\n\n";
                     std::cout << "The current opcode determinant is \"Other Source Register\".\n";
                     std::cout << "The current values for the opcode determinant are as follows:\n";
                     std::cout << "====================================================================\n";
@@ -1170,8 +2089,8 @@ struct BinaryInstructionUniversal {
                 try {
                     return_value = fpu_s_instructions.at(static_cast<int>(register_instruction.function_code));
                 } catch (const std::out_of_range& e) {
-                    std::cout
-                        << "ERROR: Floating Point Unit Single Precision Instruction isn't in the database.\nReported Statistics:\n";
+                    std::cout << "ERROR: Floating Point Unit Single Precision Instruction isn't in the "
+                                 "database.\nReported Statistics:\n";
                     std::cout << "  Location in File(bytes from the start): " << file_location << "\n";
                     std::cout << "  Instruction(int): " << instruction << "\n";
                     std::cout << "  Instruction(hex): " << std::hex << instruction << "\n";
@@ -1214,7 +2133,8 @@ struct BinaryInstructionUniversal {
                     std::cout << "  Target Register: " << static_cast<int>(register_instruction.target_register)
                               << "\n";
                     std::cout << "  Shift Value: " << static_cast<int>(register_instruction.shift_value) << "\n";
-                    std::cout << "  Function Code(0-63): " << static_cast<int>(register_instruction.function_code) << "\n\n";
+                    std::cout << "  Function Code(0-63): " << static_cast<int>(register_instruction.function_code)
+                              << "\n\n";
                     std::cout << "The current opcode determinant is \"Function Code\".\n";
                     std::cout << "The current values for the opcode determinant are as follows:\n";
                     std::cout << "====================================================================\n";
@@ -1377,8 +2297,6 @@ struct BinaryInstructionUniversal {
     std::string opcode_name = setOpcodeName();
 
    public:
-
-
     uint8_t getOpcode() { return register_instruction.opcode; }
     uint8_t getSourceRegister1() { return register_instruction.source_register1; }
     uint8_t getSourceRegister2() { return register_instruction.source_register2; }
@@ -1398,7 +2316,24 @@ struct BinaryInstructionUniversal {
 
     void setOpcodeGroupName() { opcode_group_name = opcode_groups.at(static_cast<int>(opcode_group)); }
 
-    //! Write a setOpcodeGroup function here
+    OPCODE_GROUP setOpcodeGroup() {
+        switch (register_instruction.opcode) {
+            case 0:
+                return OPCODE_GROUP::REGISTER;
+            case 1:
+                return OPCODE_GROUP::REGISTER_IMMEDIATE;
+            case 16:
+                return setOpcodeGroup_SystemControl();
+            case 17:
+                return setOpcodeGroup_FloatingPointUnit();
+            case 18:
+                return setOpcodeGroup_VectorProcessingUnit();
+            case 28:
+                return setOpcodeGroup_MultimediaExtensions();
+            default:
+                return OPCODE_GROUP::STANDARD;
+        }
+    }
 
     std::string setOpcodeName() {
         switch (register_instruction.opcode) {
@@ -1425,6 +2360,11 @@ struct BinaryInstructionUniversal {
         };
     }
 
+    BinaryInstructionUniversal(uint32_t i, int f) : instruction_type('R'), instruction(i), file_location(f) {
+        if (i == 0) {
+            opcode_name = "NOP";
+        }
+    }
     BinaryInstructionUniversal(char c, uint32_t i, int f) : instruction_type(c), instruction(i), file_location(f) {}
 };
 
@@ -1515,6 +2455,7 @@ class ELFParser {
         readSectionHeaders();
 
         parseProgram(program_headers[0]);
+        // parseProgram(program_headers[1]);
 
         // If we've gotten to this point, we've succesfully loaded the binary file into our program/memory
         return true;
@@ -1654,7 +2595,10 @@ class ELFParser {
 
     void parseProgram(Elf32_Phdr& program_header) {
         file.seekg(program_header.offset, std::ios::beg);  // Go to the offset of the actual program
-        uint8_t char_array[4];                                // to read in 4 byte chunks
+        std::ofstream outputfile("assembly_code.txt", std::ios::app);
+        outputfile << "Instruction\n";
+        outputfile.close();
+        uint8_t char_array[4];                             // to read in 4 byte chunks
 
         // std::cout << program_header.file_size + program_header.offset << " " << file.tellg() << "\n";
         while (program_header.file_size + program_header.offset >= file.tellg()) {
@@ -1668,29 +2612,64 @@ class ELFParser {
             // Now we have the whole instruction
             uint32_t raw_instruction = parseBinary(char_array);  // Store as a general instruction
 
-            if (static_cast<int>(raw_instruction) == 1108279850) {
-                std::cout << "Found the instruction at file location: " << file.tellg() << "\n";
-                std::cout << "Hex location of instruction: " << std::hex << file.tellg() << std::dec << "\n";
+            uint32_t bad_instruction_check = 1108279850;
+
+            if (raw_instruction == bad_instruction_check) {
+                std::cout << "Found the bad instruction at file location: " << file.tellg() << "\n";
+                std::cout << "Hex location of bad instruction: " << std::hex << file.tellg() << std::dec << "\n";
             }
 
             if (!isLittleEndian) {
                 raw_instruction = swap32(raw_instruction);
             }
 
-            std::cout << "Raw instruction: " << raw_instruction << "\n";
-            BinaryInstructionUniversal formatted_instruction = opcodeChecker(raw_instruction, static_cast<int>(file.tellg()));
+            // std::cout << "Raw instruction: " << std::hex << raw_instruction << std::dec << "\n";
+            BinaryInstructionUniversal formatted_instruction =
+                opcodeChecker(raw_instruction, static_cast<int>(file.tellg()));
 
-            std::cout << formatted_instruction.getOpcodeName() << "\n";
+            //! Write to a file the following information
+            //! f"{formatted_instruction.opcode_name} source_register, target_register, immediate
+            
+            std::string source_register = general_program_registers.at(
+                static_cast<int>(formatted_instruction.getSourceRegister1()));
+            std::string target_register =
+                general_program_registers.at(static_cast<int>(formatted_instruction.getSourceRegister2()));
+            std::string destination_register =
+                general_program_registers.at(static_cast<int>(formatted_instruction.getDestinationRegister()));
+            int immediate_value = formatted_instruction.getImmediateValue();
+            int pseudo_address = formatted_instruction.getPsuedoAddress();
+
+            outputfile.open("assembly_code.txt", std::ios::app);
+            if (formatted_instruction.instruction_type == 'R') {
+                outputfile << formatted_instruction.getOpcodeName() << " " <<
+                    source_register << " " << target_register << " " << 
+                    destination_register << "\n";    
+            } else if (formatted_instruction.instruction_type == 'I') {
+                outputfile << formatted_instruction.getOpcodeName() << " " << 
+                    source_register << " " << target_register << " " <<
+                    std::hex << immediate_value << std::dec << "\n";
+            } else { // It's J-type
+                outputfile << formatted_instruction.getOpcodeName() << " " <<
+                    std::hex << pseudo_address << std::dec << "\n";
+            }
+            outputfile.close();
+            // std::cout << formatted_instruction.getOpcodeName() << "\n";
         }
     }
 
     // Identifies the Opcode to run for a given instruction, creating and returning a universal formatted binary
     // instruction
     BinaryInstructionUniversal opcodeChecker(uint32_t instruction, int file_location) {
+        BinaryInstructionUniversal universal_instruction = {0, file_location};
+
+        if (instruction == 0) {
+            return universal_instruction;
+        }
+
         // Time to figure out what the instruction is supposed to do
         // std::cout << std::hex << instruction << "\n";
         int opcode = instruction >> 26;  // in binary
-        BinaryInstructionUniversal universal_instruction = {'I', instruction, file_location};
+        universal_instruction = {'I', instruction, file_location};
 
         //? Use Enum Class and Switch Statement for opcode lookup
         switch (opcode) {
@@ -1754,7 +2733,6 @@ int main(int argc, char* argv[]) {
         std::cerr << "No input file provided. Please use the --input-file argument to specify a file.\n";
         return 1;
     }
-
 
     ELFParser parser;
 
@@ -2238,11 +3216,11 @@ bool valid_arg(char* argument, std::string& arg, std::string& value) {
     // Tries to find the current argument in the list of possible_args
     for (int j = 0; j < 6; j++) {
         if (arg == possible_args[j]) {
-            while (argument[i] != '\0') {  
+            while (argument[i] != '\0') {
                 i++;
                 value.push_back(argument[i]);
             }
-        return true;
+            return true;
         }
     }
 
